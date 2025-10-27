@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<package>
+  <name>feature_tracker_event</name>
+  <version>0.1.0</version>
+  <description>Combined package: Optical flow using DVS + Feature tracker</description>
+
+  <!-- ==================== -->
+  <!-- Maintainers Section -->
+  <!-- ==================== -->
+  <maintainer email="anton.mitrokhin@phystech.edu">ncos</maintainer>
+  <maintainer email="qintonguav@gmail.com">dvorak</maintainer>
+
+  <!-- =============== -->
+  <!-- License Section -->
+  <!-- =============== -->
+  <license>MIT</license>  <!-- Changed from TODO to MIT as the more restrictive license -->
+
+  <!-- ====================== -->
+  <!-- Build Tool Dependencies -->
+  <!-- ====================== -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- ========================= -->
+  <!-- Combined Build Dependencies -->
+  <!-- ========================= -->
+
+  <build_depend>OpenCV</build_depend>
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>image_transport</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>pcl_conversions</build_depend>
+  <build_depend>pcl_ros</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>tf_conversions</build_depend>
+  <build_depend>libpcl-all-dev</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>visualization_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>laser_geometry</build_depend>
+  <build_depend>dvs_msgs</build_depend>
+  
+  <!-- Feature Tracker Specific -->
+  <build_depend>camera_model</build_depend>
+  <build_depend>message_filters</build_depend>
+
+  <!-- ====================== -->
+  <!-- Combined Run Dependencies -->
+  <!-- ====================== -->
+  <run_depend>OpenCV</run_depend>
+  <run_depend>cv_bridge</run_depend>
+  <run_depend>image_transport</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>pcl_conversions</run_depend>
+  <run_depend>pcl_ros</run_depend>
+  <run_depend>libpcl-all</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>visualization_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>tf_conversions</run_depend>
+  <run_depend>message_runtime</run_depend>
+  <run_depend>laser_geometry</run_depend>
+  <run_depend>dvs_msgs</run_depend>
+  
+  <!-- Feature Tracker Specific -->
+  <run_depend>camera_model</run_depend>
+
+  <!-- ================ -->
+  <!-- Export Section -->
+  <!-- ================ -->
+  <export>
+    <!-- Metapackage flag if needed -->
+    <!-- <metapackage/> -->
+  </export>
+</package>
