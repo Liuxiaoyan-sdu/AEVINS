@@ -63,7 +63,7 @@
 #define ALPHA 0.1             // 自适应系数 α
 #define PIXEL_PLANE_SIZE 89960 // 像素平面大小 (346*260)
 #define MIN_PIXEL_RATIO 0.2   // 最小像素比例 (20%)
-#define INITIAL_EVENT_COUNT 10000 // 初始事件数量
+#define INITIAL_EVENT_COUNT 8000 // 初始事件数量
 #define EVENT_HISTORY_SIZE 1000000 // 事件历史缓冲区大小
 
 using EventBuffer = std::deque<dvs_msgs::Event>;
@@ -341,7 +341,7 @@ public:
                 Event e((*event_array_ptr)[i].x, (*event_array_ptr)[i].y, time);
                 estimator->add_event(e);
             }
-            estimator->recompugit add src/VINS-Mono src/catkin_simple src/rpg_dvs_roste();
+            estimator->recompute();
             // ROS_INFO("recompute done");
             cv::transpose(EventFile::projection_img(&estimator->ev_buffer, 1), event_image);
         }

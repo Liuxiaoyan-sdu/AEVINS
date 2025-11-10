@@ -70,10 +70,11 @@ class DVLConverter:
             self.position_y = msg.orientation.y  # y position
             self.position_z = msg.orientation.z  # z position
             
-            # 提取欧拉角
-            self.roll = msg.angular_velocity.x   # roll
-            self.pitch = msg.angular_velocity.y  # pitch
-            self.yaw = msg.angular_velocity.z    # yaw
+            # 提取欧拉角（DVL以度为单位，转换为弧度）
+            # 上游设备以度为单位发送 roll/pitch/yaw，这里转换为弧度以用于后续的三角函数计算
+            self.roll = math.radians(msg.angular_velocity.x)   # roll (rad)
+            self.pitch = math.radians(msg.angular_velocity.y)  # pitch (rad)
+            self.yaw = math.radians(msg.angular_velocity.z)    # yaw (rad)
             
             # 发布里程计数据
             self.publish_odometry(msg.header.stamp)
@@ -113,7 +114,7 @@ class DVLConverter:
         """
         odom_msg = Odometry()
         odom_msg.header.stamp = timestamp
-        odom_msg.header.frame_id = "odom"
+        odom_msg.header.frame_id = "world"
         odom_msg.child_frame_id = "dvl_link"
         
         # 设置位置
@@ -139,7 +140,7 @@ class DVLConverter:
         """
         pose_msg = PoseStamped()
         pose_msg.header.stamp = timestamp
-        pose_msg.header.frame_id = "odom"
+        pose_msg.header.frame_id = "world"
         
         # 设置位置
         pose_msg.pose.position.x = self.position_x

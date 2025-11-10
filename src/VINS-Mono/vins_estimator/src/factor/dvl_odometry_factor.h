@@ -52,15 +52,23 @@ public:
                 Eigen::Map<Eigen::Matrix<double, 6, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]);
                 jacobian_pose_i.setZero();
 
-                // ∂r_position/∂Pi
+                // ∂r_position/∂Pi: r_p = Qi^{-1}*(Pj - Pi) - delta_p_imu
+                // ∂(Qi^{-1}*(Pj - Pi))/∂Pi = -Qi^{-1}
                 jacobian_pose_i.block<3, 3>(0, 0) = -Qi.inverse().toRotationMatrix();
 
-                // ∂r_position/∂Qi
+                // ∂r_position/∂Qi: 使用四元数扰动模型
+                // Qi(δq) = Qi ⊗ [1, 0.5*δθ]^T, 则 ∂(Qi^{-1}*p_ij)/∂δθ = [Qi^{-1}*p_ij]_×
                 Eigen::Vector3d p_ij = Pj - Pi;
                 jacobian_pose_i.block<3, 3>(0, 3) = Utility::skewSymmetric(Qi.inverse() * p_ij);
 
-                // ∂r_rotation/∂Qi
-                jacobian_pose_i.block<3, 3>(3, 3) = -Utility::Qleft(Qj.inverse() * Qi).bottomRightCorner<3, 3>();
+                // ∂r_rotation/∂Qi: r_q = 2*vec(delta_q_imu^{-1} ⊗ Qi^{-1} ⊗ Qj)
+                // 使用链式法则和四元数左乘/右乘矩阵
+                // ∂(delta_q_imu^{-1} ⊗ delta_q_est)/∂Qi，其中 delta_q_est = Qi^{-1} ⊗ Qj
+                // = Qleft(delta_q_imu^{-1}) * ∂(Qi^{-1} ⊗ Qj)/∂Qi
+                // = Qleft(delta_q_imu^{-1}) * Qright(Qj) * ∂(Qi^{-1})/∂Qi
+                // 对于四元数 q^{-1} 关于 q 的导数：∂(q^{-1})/∂q = -Qleft(q^{-1}) * Qright(q^{-1})
+                // 简化形式（使用扰动模型）：-Qleft(delta_q_imu^{-1} * delta_q_est).bottomRight<3,3>()
+                jacobian_pose_i.block<3, 3>(3, 3) = -Utility::Qleft(delta_q_imu_.inverse() * delta_q_est).bottomRightCorner<3, 3>();
 
                 jacobian_pose_i = sqrt_info_ * jacobian_pose_i;
             }
@@ -70,10 +78,13 @@ public:
                 Eigen::Map<Eigen::Matrix<double, 6, 7, Eigen::RowMajor>> jacobian_pose_j(jacobians[1]);
                 jacobian_pose_j.setZero();
 
-                // ∂r_position/∂Pj
+                // ∂r_position/∂Pj: ∂(Qi^{-1}*(Pj - Pi))/∂Pj = Qi^{-1}
                 jacobian_pose_j.block<3, 3>(0, 0) = Qi.inverse().toRotationMatrix();
 
-                // ∂r_rotation/∂Qj
+                // ∂r_rotation/∂Qj: r_q = 2*vec(delta_q_imu^{-1} ⊗ Qi^{-1} ⊗ Qj)
+                // ∂(delta_q_imu^{-1} ⊗ Qi^{-1} ⊗ Qj)/∂Qj
+                // = Qleft(delta_q_imu^{-1} ⊗ Qi^{-1}) * ∂Qj/∂Qj
+                // = Qleft(delta_q_imu^{-1} ⊗ Qi^{-1} ⊗ Qj) (使用扰动模型简化)
                 jacobian_pose_j.block<3, 3>(3, 3) = Utility::Qleft(delta_q_imu_.inverse() * Qi.inverse() * Qj).bottomRightCorner<3, 3>();
 
                 jacobian_pose_j = sqrt_info_ * jacobian_pose_j;

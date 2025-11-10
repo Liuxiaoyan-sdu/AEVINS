@@ -4,7 +4,7 @@
 imu_topic: "/imu/data"
 dvl_topic: "/dvl/velocity_converted"
 dvl_position_topic: "/dvl/odometry"
-dvl_add: 1
+dvl_add: 0
 dvl_pose_add : 1
 # image_topic: "/bf/additional/image0"
 # output_path: "./output/"
@@ -27,22 +27,22 @@ extrinsicRotation: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [ 0.0,   0.707107,  -0.707107,  
+   data: [ 0.0,   0.70710678118,  -0.70710678118,  
             1.0,  -0.0,   0.00,   
-            0.0,  -0.707107,  -0.707107]
+            0.0,  -0.70710678118,  -0.70710678118]
 
 #Translation from camera frame to imu frame, imu^T_cam
 extrinsicTranslation: !!opencv-matrix
    rows: 3
    cols: 1
    dt: d
-   data: [-0.13068880 ,0.02992151 ,-0.02777908]
+   data: [0.121 ,-0.003392151 ,-0.225]
 
 dvlpose_information_matrix: !!opencv-matrix
    rows: 6
    cols: 1
    dt: d
-   data: [10000, 10000, 100, 900, 900, 900]
+   data: [10000, 10000, 10000, 8000, 8000, 800]
 
 tdvltoimu: !!opencv-matrix
    rows: 3
@@ -64,15 +64,14 @@ dvl_information_matrix: !!opencv-matrix
    dt: d
    data: [90000.0, 0.0, 0.0,
           0.0, 90000.0, 0.0, 
-          0.0, 0.0, 90000.0]
+          0.0, 0.0, 100000.0]
 
 #feature traker paprameters
 max_cnt: 150            # max feature number in feature tracking
 min_dist: 10            # min distance between two features 
-freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
-F_threshold: 1.5       # imageransac threshold (pixel)   第1、0.5
-F_threshold_1: 1.5     #event
-show_track: 1           # publish tracking image as topic
+freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 1.5
+F_threshold: 1.5       # imageransac threshold (pixel)   第1、0.5  1.5
+F_threshold_1: 1.5     #event                                     0.7show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
 
@@ -106,3 +105,6 @@ rolling_shutter_tr: 0               # unit: s. rolling shutter read out time per
 save_image: 1                   # save image in pose graph for visualization prupose; you can close this function by setting 0 
 visualize_imu_forward: 0        # output imu forward propogation to achieve low latency and high frequence results
 visualize_camera_size: 0.4      # size of camera marker in RVIZ
+
+
+# rosbag play -s50 m_mapping_underwater_20251030_163558.bag

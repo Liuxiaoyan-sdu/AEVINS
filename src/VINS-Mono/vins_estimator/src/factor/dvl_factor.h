@@ -20,39 +20,36 @@ public:
           Qi_(Qi), omega_(omega), sqrt_info_(information.llt().matrixL().transpose()) {}
 
     virtual bool Evaluate(double const* const* parameters, double* residuals, double** jacobians) const {
-        // 参数：para_SpeedBias，9维，前3维是世界坐标系下的速度，后6维是ba和bg
-        Eigen::Map<const Eigen::Vector3d> v_world(parameters[0]);        // 世界坐标系速度
-        Eigen::Vector3d bg(parameters[0][6], parameters[0][7], parameters[0][8]); // 陀螺仪偏置
+        // 参数：para_SpeedBias[9] = [v_world(3), ba(3), bg(3)]
+        // 索引: [0-2]: 世界坐标系速度, [3-5]: 加速度计偏置, [6-8]: 陀螺仪偏置
+        Eigen::Map<const Eigen::Vector3d> v_world(parameters[0]);  // 世界坐标系速度 [0-2]
+        // 注意：不考虑旋转修正时，不需要读取 bg
 
         // 将世界坐标系下的速度转换到IMU坐标系
         Eigen::Vector3d v_imu_opt = Qi_.inverse() * v_world;
 
         // 将DVL测量的速度转换到IMU坐标系
+        // 注意：不考虑旋转修正，即假设 DVL 和 IMU 在同一点或旋转影响可忽略
         Eigen::Vector3d v_imu_measured = R_dvl_to_imu_ * v_dvl_;
 
-        // 计算旋转带来的速度影响
-        Eigen::Vector3d omega_corrected = omega_ - bg; // 修正后的真实角速度
-        Eigen::Vector3d v_rotation = omega_corrected.cross(t_dvl_to_imu_); // 旋转引起的附加速度
-        Eigen::Vector3d v_imu_corrected = v_imu_measured;// - v_rotation; // 修正后的DVL速度
-        // 计算残差
-        
+        // 计算残差：估计速度 - 测量速度
         Eigen::Map<Eigen::Vector3d> residual(residuals);
-        residual = v_imu_opt - v_imu_corrected;
+        residual = v_imu_opt - v_imu_measured;
         residual = sqrt_info_ * residual; // 加权残差
-        // cout<<"residual: "<<residual.transpose()<<endl;
-        // cout<<"v_imu_opt: "<<v_imu_opt.transpose()<<endl;
-        // cout<<"v_imu_corrected: "<<v_imu_corrected.transpose()<<endl;
-       
 
-        // 计算雅可比矩阵（如果需要）
+        // 计算雅可比矩阵
         if (jacobians && jacobians[0]) {
             Eigen::Map<Eigen::Matrix<double, 3, 9, Eigen::RowMajor>> jacobian(jacobians[0]);
             jacobian.setZero();
-            // 残差对 v_world 的偏导数
+            
+            // 残差对 v_world 的偏导数: ∂r/∂v_world = ∂(Qi^{-1} * v_world)/∂v_world = Qi^{-1}
             jacobian.block<3, 3>(0, 0) = sqrt_info_ * Qi_.inverse().toRotationMatrix();
-            // 对 bg 的偏导数（通过 v_rotation 间接影响）
-            Eigen::Matrix3d skew_t = skewSymmetric(t_dvl_to_imu_);
-            jacobian.block<3, 3>(0, 6) = sqrt_info_ * skew_t;
+            
+            // 对 ba 的偏导数为 0（速度残差不依赖加速度计偏置）
+            // jacobian.block<3, 3>(0, 3) = 0;  // 已经通过 setZero() 设置
+            
+            // 对 bg 的偏导数为 0（不考虑旋转修正时，残差不依赖陀螺仪偏置）
+            // jacobian.block<3, 3>(0, 6) = 0;  // 已经通过 setZero() 设置
         }
 
         return true;
