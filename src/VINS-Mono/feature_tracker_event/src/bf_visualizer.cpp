@@ -58,8 +58,8 @@
 #define TIME_WIDTH_PROCESS 0.05
 
 // 自适应事件数量参数
-#define MIN_EVENT_COUNT 5000  // 最小事件数量
-#define MAX_EVENT_COUNT 20000 // 最大事件数量
+#define MIN_EVENT_COUNT 5000  // 最小事件数量阈值：≥此值提取事件特征，<此值舍弃事件只用图像特征
+#define MAX_EVENT_COUNT 20000 // 最大事件数量（收集的上限）
 #define ALPHA 0.1             // 自适应系数 α
 #define PIXEL_PLANE_SIZE 89960 // 像素平面大小 (346*260)
 #define MIN_PIXEL_RATIO 0.2   // 最小像素比例 (20%)
@@ -77,7 +77,7 @@ std::string input_image_topic;
 std::string output_image_s0_topic;
 bool process_data;
 bool init_pub = false;
-ull interval_time_ns = 40000000;
+ull interval_time_ns = 80000000;
 
 // Main class
 template <size_t MAX_SZ, sll SPAN> class EventVisualizer {
@@ -187,13 +187,29 @@ public:
 
 
     void create_eventpackage() {
-        if (!new_image || time_buffer_.empty() || event_buffer_.empty()) {
-            return;  // 无时间戳或事件可处理，直接返回
+        if (!new_image || time_buffer_.empty()) {
+            return;  // 无时间戳可处理，直接返回
         }
+        
         // 取出第一个pair（时间戳, 图像）
         auto cur_pair = time_buffer_.front();
         ros::Time current_time = cur_pair.first;
         cv::Mat current_image = cur_pair.second;
+        
+        // 检查事件缓冲区是否为空
+        if (event_buffer_.empty()) {
+            ROS_WARN("Event buffer is empty at timestamp %.6f, using image features only.", current_time.toSec());
+            EventArrayPtr empty_event_array = std::make_shared<EventArray>();
+            image_cb(empty_event_array, current_time, current_image);
+            time_buffer_.pop_front();
+            if (!time_buffer_.empty()) {
+                create_eventpackage();
+            } else {
+                new_image = false;
+            }
+            return;
+        }
+        
         // 找到当前时间戳之后的事件
         auto it = event_buffer_.begin();
         if (is_first_frame && it->ts > current_time) {
@@ -208,49 +224,67 @@ public:
             ROS_WARN("No events found after timestamp %.6f", current_time.toSec());
             return;
         }
+        
         EventArrayPtr event_array_ptr = std::make_shared<EventArray>();
+        bool skip_events = false;  // 是否跳过事件特征提取
+        
         if (is_first_frame) {
-            if (INITIAL_EVENT_COUNT > event_buffer_.size()) {
-                ROS_WARN(" events available after timestamp %.6f, need Waiting for more events.", current_time.toSec());
+            size_t available_events = std::distance(it, event_buffer_.end());
+            // 检查事件数量是否低于MIN_EVENT_COUNT - 如果低于直接舍弃事件
+            if (available_events < MIN_EVENT_COUNT) {
+                ROS_WARN("Event count (%zu) below MIN_EVENT_COUNT (%d) at timestamp %.6f, skipping events and using image features only.", 
+                         available_events, MIN_EVENT_COUNT, current_time.toSec());
+                skip_events = true;
+            } else if (INITIAL_EVENT_COUNT > event_buffer_.size()) {
+                ROS_WARN("Available events (%zu) less than initial count (%d) at timestamp %.6f, need Waiting for more events.", 
+                         event_buffer_.size(), INITIAL_EVENT_COUNT, current_time.toSec());
                 return;  // 事件不足，等待更多事件
+            } else {
+                for (ull count = 0; count < INITIAL_EVENT_COUNT && it != event_buffer_.end(); ++count, ++it) {
+                    event_array_ptr->push_back(*it);
+                }
+                is_first_frame = false;
             }
-            for (ull count = 0; count < INITIAL_EVENT_COUNT && it != event_buffer_.end(); ++count, ++it) {
-                event_array_ptr->push_back(*it);
-            }
-            is_first_frame = false;
-        }else{
-            ull remaining_event_time = event_buffer_.end()->ts.toNSec() - current_time.toNSec();
-            size_t num_events = std::distance(it, event_buffer_.end());
-            if (num_events*(remaining_event_time) < (previous_event_count * interval_time_ns)||(num_events<MIN_EVENT_COUNT)) {
-                ROS_WARN(" events available after timestamp %.6f, need Waiting for more events.", current_time.toSec());
-                return;  // 事件不足，等待更多事件
-            }
+        } else {
+            // 按自适应逻辑收集事件（滑动窗口）
             for (ull count = 0; count < MAX_EVENT_COUNT && count*((*it).ts.toNSec() - current_time.toNSec()) < (previous_event_count * interval_time_ns ) && it != event_buffer_.end(); ++count, ++it) {
                 event_array_ptr->push_back(*it);
             }
-            // 如果事件数小于下限，补足到下限（如果有足够事件）
-            ull current_size = event_array_ptr->size();
-            while (current_size < MIN_EVENT_COUNT && it != event_buffer_.end()) {
-                event_array_ptr->push_back(*it);
-                ++current_size;
-                ++it;
+            
+            // 检查滑动窗口收集后的事件数量是否小于MIN_EVENT_COUNT
+            ull collected_size = event_array_ptr->size();
+            if (collected_size < MIN_EVENT_COUNT) {
+                ROS_WARN("Collected event count (%llu) after sliding window below MIN_EVENT_COUNT (%d) at timestamp %.6f, skipping events and using image features only.", 
+                         collected_size, MIN_EVENT_COUNT, current_time.toSec());
+                skip_events = true;
+                event_array_ptr->clear();  // 清空已收集的事件
             }
         }
-        // 调用函数进行优化
-        if (!event_array_ptr->empty()) {
+        
+        // 调用函数进行处理
+        if (skip_events) {
+            // 事件数量不足阈值，仅使用图像特征
+            EventArrayPtr empty_event_array = std::make_shared<EventArray>();
+            image_cb(empty_event_array, current_time, current_image);
+            time_buffer_.pop_front();
+            ROS_INFO("Processed timestamp %.6f with image features only (events skipped). Remaining buffer size: %zu", 
+                    current_time.toSec(), time_buffer_.size());
+        } else if (!event_array_ptr->empty()) {
             previous_event_count = event_array_ptr->size();
             // 传递当前图像指针
             image_cb(event_array_ptr, current_time, current_image);  // 处理事件帧
             time_buffer_.pop_front();  // 移除已处理的时间戳
             ROS_INFO("Processed timestamp %.6f with %zu events. Remaining buffer size: %zu", 
                     current_time.toSec(), event_array_ptr->size(), time_buffer_.size());
-            if (!time_buffer_.empty()) {
-                create_eventpackage();
-            } else {
-                new_image = false;
-            }
         } else {
             ROS_WARN("No events found after timestamp %.6f.", current_time.toSec());
+        }
+        
+        // 继续处理下一帧
+        if (!time_buffer_.empty()) {
+            create_eventpackage();
+        } else {
+            new_image = false;
         }
     }
 
@@ -323,7 +357,9 @@ public:
     }
     
     void image_cb(const EventArrayPtr event_array_ptr, ros::Time event_frame_time, const cv::Mat& current_image) {
-        if (!event_array_ptr->empty()) {
+        bool has_events = !event_array_ptr->empty();
+        
+        if (has_events) {
             ros::Time first_event_time = (*event_array_ptr)[0].ts;
             ros::Time last_event_time = (*event_array_ptr)[event_array_ptr->size()-1].ts;
             // ROS_INFO("=== Event Package Info ===");
@@ -333,9 +369,10 @@ public:
             // ROS_INFO("Event frame time: %.6f", event_frame_time.toSec());
             // ROS_INFO("=========================");
         }
-        // ROS_INFO("event_array_ptr->size(): %zu", event_array_ptr->size());
+        
+        // 处理事件图像（仅当有事件时）
         cv::Mat event_image;
-        if (estimator != NULL) {
+        if (has_events && estimator != NULL) {
             for (int i = (event_array_ptr->size()-1); i >= 0; i--){
                 ull time = (*event_array_ptr)[i].ts.toNSec();
                 Event e((*event_array_ptr)[i].x, (*event_array_ptr)[i].y, time);
@@ -345,24 +382,29 @@ public:
             // ROS_INFO("recompute done");
             cv::transpose(EventFile::projection_img(&estimator->ev_buffer, 1), event_image);
         }
-        // 单独发布事件帧
+        
+        // 单独发布事件帧（仅当有事件图像时）
         if (!event_image.empty()) {
             sensor_msgs::ImagePtr msg0 = cv_bridge::CvImage(std_msgs::Header(), "mono8", event_image).toImageMsg();
             msg0->header.stamp = event_frame_time;
             suppl_image_pub_0.publish(msg0);
         }
-        // 融合current_image和event_image的特征点并发布
+        
+        // 提取普通图像的特征点
         trackerData_img.readImage(current_image, event_frame_time.toSec());
 
+        // 仅当有事件图像时才提取事件特征点
         if (!event_image.empty()) {
             trackerData_event.readImage(event_image, event_frame_time.toSec());
+            // 更新事件特征点 ID
+            for (unsigned int i = 0;; i++) {
+                bool completed = false;
+                completed |= trackerData_event.updateID(i);
+                if (!completed) break;
+            }
         }
-        // 更新特征点 ID
-        for (unsigned int i = 0;; i++) {
-            bool completed = false;
-            completed |= trackerData_event.updateID(i);
-            if (!completed) break;
-        }
+        
+        // 更新普通图像特征点 ID
         for (unsigned int i = 0;; i++) {
             bool completed = false;
             completed |= trackerData_img.updateID(i);
@@ -400,25 +442,29 @@ public:
                 velocity_y_of_point.values.push_back(pts_velocity0[j].y);
             }
         }
-        // 添加event_image特征点（ID奇数）
-        auto& un_pts1 = trackerData_event.cur_un_pts;
-        auto& cur_pts1 = trackerData_event.cur_pts;
-        auto& ids1 = trackerData_event.ids;
-        auto& pts_velocity1 = trackerData_event.pts_velocity;
-        for (unsigned int j = 0; j < ids1.size(); j++) {
-            if (trackerData_event.track_cnt[j] > 1) {
-                geometry_msgs::Point32 p;
-                p.x = un_pts1[j].x;
-                p.y = un_pts1[j].y;
-                p.z = 1;
-                merged_features->points.push_back(p);
-                id_of_point.values.push_back(ids1[j]*2+1); // 奇数ID
-                u_of_point.values.push_back(cur_pts1[j].x);
-                v_of_point.values.push_back(cur_pts1[j].y);
-                velocity_x_of_point.values.push_back(pts_velocity1[j].x);
-                velocity_y_of_point.values.push_back(pts_velocity1[j].y);
+        
+        // 添加event_image特征点（ID奇数）- 仅当有事件图像时
+        if (!event_image.empty()) {
+            auto& un_pts1 = trackerData_event.cur_un_pts;
+            auto& cur_pts1 = trackerData_event.cur_pts;
+            auto& ids1 = trackerData_event.ids;
+            auto& pts_velocity1 = trackerData_event.pts_velocity;
+            for (unsigned int j = 0; j < ids1.size(); j++) {
+                if (trackerData_event.track_cnt[j] > 1) {
+                    geometry_msgs::Point32 p;
+                    p.x = un_pts1[j].x;
+                    p.y = un_pts1[j].y;
+                    p.z = 1;
+                    merged_features->points.push_back(p);
+                    id_of_point.values.push_back(ids1[j]*2+1); // 奇数ID
+                    u_of_point.values.push_back(cur_pts1[j].x);
+                    v_of_point.values.push_back(cur_pts1[j].y);
+                    velocity_x_of_point.values.push_back(pts_velocity1[j].x);
+                    velocity_y_of_point.values.push_back(pts_velocity1[j].y);
+                }
             }
         }
+        
         merged_features->channels.push_back(id_of_point);
         merged_features->channels.push_back(u_of_point);
         merged_features->channels.push_back(v_of_point);
@@ -429,11 +475,16 @@ public:
         } else {
             pub_merged_.publish(merged_features);
         }
+        
         // 输出特征点数量
         ROS_INFO("current_image特征点数: %zu", trackerData_img.cur_pts.size());
-        ROS_INFO("event_image特征点数: %zu", trackerData_event.cur_pts.size());
+        if (!event_image.empty()) {
+            ROS_INFO("event_image特征点数: %zu", trackerData_event.cur_pts.size());
+        } else {
+            ROS_INFO("event_image特征点数: 0 (events skipped due to insufficient count)");
+        }
         // 可视化特征点图像并发布
-        // current_image
+        // current_image - 始终发布
         if (!trackerData_img.cur_pts.empty()) {
             cv_bridge::CvImagePtr cv_ptr0(new cv_bridge::CvImage);
             cv_ptr0->encoding = sensor_msgs::image_encodings::BGR8;
@@ -447,19 +498,22 @@ public:
             cv_ptr0->header.stamp = event_frame_time;
             pub_match_0_.publish(cv_ptr0->toImageMsg());
         }
-        // event_image
-        if (!event_image.empty() && !trackerData_event.cur_pts.empty()) {
-            cv_bridge::CvImagePtr cv_ptr1(new cv_bridge::CvImage);
-            cv_ptr1->encoding = sensor_msgs::image_encodings::BGR8;
-            cv::Mat rgb_img1;
-            cv::cvtColor(event_image, rgb_img1, CV_GRAY2RGB);
-            for (unsigned int j = 0; j < trackerData_event.cur_pts.size(); j++) {
-                double len = std::min(1.0, 1.0 * trackerData_event.track_cnt[j] / 20.0);
-                cv::circle(rgb_img1, trackerData_event.cur_pts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
+        
+        // event_image - 仅当有事件图像时发布
+        if (!event_image.empty()) {
+            if (!trackerData_event.cur_pts.empty()) {
+                cv_bridge::CvImagePtr cv_ptr1(new cv_bridge::CvImage);
+                cv_ptr1->encoding = sensor_msgs::image_encodings::BGR8;
+                cv::Mat rgb_img1;
+                cv::cvtColor(event_image, rgb_img1, CV_GRAY2RGB);
+                for (unsigned int j = 0; j < trackerData_event.cur_pts.size(); j++) {
+                    double len = std::min(1.0, 1.0 * trackerData_event.track_cnt[j] / 20.0);
+                    cv::circle(rgb_img1, trackerData_event.cur_pts[j], 2, cv::Scalar(255 * (1 - len), 0, 255 * len), 2);
+                }
+                cv_ptr1->image = rgb_img1;
+                cv_ptr1->header.stamp = event_frame_time;
+                pub_match_1_.publish(cv_ptr1->toImageMsg());
             }
-            cv_ptr1->image = rgb_img1;
-            cv_ptr1->header.stamp = event_frame_time;
-            pub_match_1_.publish(cv_ptr1->toImageMsg());
         }
     }
 };
