@@ -4,7 +4,7 @@
 imu_topic: "/imu/data"
 dvl_topic: "/dvl/velocity_converted"
 dvl_position_topic: "/dvl/odometry"
-dvl_add: 0
+dvl_add: 1
 dvl_pose_add : 1
 # image_topic: "/bf/additional/image0"
 # output_path: "./output/"
@@ -42,7 +42,7 @@ dvlpose_information_matrix: !!opencv-matrix
    rows: 6
    cols: 1
    dt: d
-   data: [10000, 10000, 10000, 8000, 8000, 800]
+   data: [100, 100, 100, 80, 80, 80000]
 
 tdvltoimu: !!opencv-matrix
    rows: 3
@@ -71,7 +71,7 @@ max_cnt: 150            # max feature number in feature tracking
 min_dist: 10            # min distance between two features 
 freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 1.5
 F_threshold: 1.5       # imageransac threshold (pixel)   第1、0.5  1.5
-F_threshold_1: 1.5     #event                                     0.7show_track: 1           # publish tracking image as topic
+F_threshold_1: 0.7     #event                                     0.7show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
 

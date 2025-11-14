@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 图像预处理节点 Launch 文件 -->
+    <!-- 用于提升图像质量，解决VINS-Mono中对比度低、噪点多的问题 -->
+    
+    <!-- 输入输出话题配置 -->
+    <arg name="input_topic" default="/cam0/image_raw" />
+    <arg name="output_topic" default="/cam0/image_preprocessed" />
+    
+    <!-- 去噪参数 -->
+    <arg name="enable_denoise" default="true" />
+    <arg name="denoise_h" default="10" />
+    <arg name="denoise_template_size" default="7" />
+    <arg name="denoise_search_size" default="21" />
+    
+    <!-- CLAHE参数（对比度增强） -->
+    <arg name="enable_clahe" default="true" />
+    <arg name="clahe_clip_limit" default="3.0" />
+    <arg name="clahe_tile_size" default="8" />
+    
+    <!-- 双边滤波参数（可选） -->
+    <arg name="enable_bilateral" default="false" />
+    <arg name="bilateral_d" default="9" />
+    <arg name="bilateral_sigma_color" default="75" />
+    <arg name="bilateral_sigma_space" default="75" />
+    
+    <!-- 锐化参数（可选） -->
+    <arg name="enable_sharpen" default="false" />
+    <arg name="sharpen_amount" default="0.5" />
+    
+    <!-- 队列大小 -->
+    <arg name="queue_size" default="1" />
+    
+    <!-- 启动图像预处理节点 -->
+    <node name="image_preprocessor" pkg="tools" type="image_preprocessor_node.py" output="screen">
+        <param name="input_topic" value="$(arg input_topic)" />
+        <param name="output_topic" value="$(arg output_topic)" />
+        
+        <param name="enable_denoise" value="$(arg enable_denoise)" />
+        <param name="denoise_h" value="$(arg denoise_h)" />
+        <param name="denoise_template_size" value="$(arg denoise_template_size)" />
+        <param name="denoise_search_size" value="$(arg denoise_search_size)" />
+        
+        <param name="enable_clahe" value="$(arg enable_clahe)" />
+        <param name="clahe_clip_limit" value="$(arg clahe_clip_limit)" />
+        <param name="clahe_tile_size" value="$(arg clahe_tile_size)" />
+        
+        <param name="enable_bilateral" value="$(arg enable_bilateral)" />
+        <param name="bilateral_d" value="$(arg bilateral_d)" />
+        <param name="bilateral_sigma_color" value="$(arg bilateral_sigma_color)" />
+        <param name="bilateral_sigma_space" value="$(arg bilateral_sigma_space)" />
+        
+        <param name="enable_sharpen" value="$(arg enable_sharpen)" />
+        <param name="sharpen_amount" value="$(arg sharpen_amount)" />
+        
+        <param name="queue_size" value="$(arg queue_size)" />
+    </node>
+    
+</launch>

@@ -27,8 +27,8 @@ extrinsicRotation: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [0.0, -1.0, 0.0,
-          -1.0, 0.0, 0.0, 
+   data: [0.0, 1.0, 0.0,
+          1.0, 0.0, 0.0, 
           0.0, 0.0, -1.0]
 #Translation from camera frame to imu frame, imu^T_cam
 extrinsicTranslation: !!opencv-matrix
@@ -41,7 +41,7 @@ dvlpose_information_matrix: !!opencv-matrix
    rows: 6
    cols: 1
    dt: d
-   data: [90000, 90000, 90000, 0, 0, 0]
+   data: [900, 900, 900, 10000, 10000, 10000]
 
 tdvltoimu: !!opencv-matrix
    rows: 3
@@ -69,7 +69,7 @@ dvl_information_matrix: !!opencv-matrix
 max_cnt: 150            # max feature number in feature tracking
 min_dist: 10            # min distance between two features 
 freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
-F_threshold: 0.05        # ransac threshold (pixel)   第1、0.5 data_5_1.5 data_6 1.3
+F_threshold: 1.5        # ransac threshold (pixel)   第1、0.5 data_5_1.5 data_6 1.3
 F_threshold_1: 1
 show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
