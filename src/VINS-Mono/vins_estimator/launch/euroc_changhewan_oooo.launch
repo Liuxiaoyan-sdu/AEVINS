@@ -1,6 +1,6 @@
 <launch>
     <arg name="output_type" default="screen"/>
-    <arg name="config_path" default = "$(find feature_tracker)/../config/euroc/canghewan.yaml" />
+    <arg name="config_path" default = "$(find feature_tracker)/../config/euroc/changhewan_test.yaml" />
 	  <arg name="vins_path" default = "$(find feature_tracker)/../config/../" />
     <arg name="input_file"  default=""/>
 

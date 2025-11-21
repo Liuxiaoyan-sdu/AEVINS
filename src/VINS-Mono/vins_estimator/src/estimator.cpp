@@ -728,8 +728,26 @@ void Estimator::optimization()
 {
     ceres::Problem problem;
     ceres::LossFunction *loss_function;//损失函数损失选项与很多
-    //loss_function = new ceres::HuberLoss(1.0);
-    loss_function = new ceres::CauchyLoss(1.0);//对异常值进行惩罚的残差函数，在相当于优化内部的问题
+    
+    // 根据配置选择损失函数（用于视觉约束的鲁棒估计）
+    if (USE_HARD_THRESHOLD == 1)
+    {
+        // 硬阈值：超过阈值的残差权重为0，完全不参与优化
+        loss_function = new HardThresholdLoss(VISUAL_LOSS_THRESHOLD);
+        ROS_INFO_ONCE("Using HardThresholdLoss with threshold: %.2f pixels", VISUAL_LOSS_THRESHOLD);
+    }
+    else if (USE_HARD_THRESHOLD == 2)
+    {
+        // 饱和损失：在阈值附近平滑过渡
+        loss_function = new SaturatedLoss(VISUAL_LOSS_THRESHOLD);
+        ROS_INFO_ONCE("Using SaturatedLoss with threshold: %.2f pixels", VISUAL_LOSS_THRESHOLD);
+    }
+    else
+    {
+        // 默认：Cauchy损失（对大残差有一定容忍度但会降权）
+        loss_function = new ceres::CauchyLoss(VISUAL_LOSS_THRESHOLD);
+        ROS_INFO_ONCE("Using CauchyLoss with threshold: %.2f pixels", VISUAL_LOSS_THRESHOLD);
+    }
     for (int i = 0; i < WINDOW_SIZE + 1; i++)
     {
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
@@ -826,7 +844,6 @@ void Estimator::optimization()
                 // 获取IMU姿态 Qi
                 Eigen::Quaterniond Qi(para_Pose[frame_idx][6], para_Pose[frame_idx][3],
                                     para_Pose[frame_idx][4], para_Pose[frame_idx][5]);
-            
                 // 创建DVL因子
                 DVLSpeedFactor* dvl_factor = new DVLSpeedFactor(
                     dvl_velocity_buf[frame_idx].first, R_DVL_TO_IMU, T_DVL_TO_IMU, Qi, dvl_velocity_buf[frame_idx].second, INFORMATION_MATRIX);

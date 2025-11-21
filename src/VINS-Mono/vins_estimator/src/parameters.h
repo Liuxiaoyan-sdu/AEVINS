@@ -36,11 +36,16 @@ extern double SOLVER_TIME;
 extern int NUM_ITERATIONS;
 extern std::string EX_CALIB_RESULT_PATH;
 extern std::string VINS_RESULT_PATH;
+
+// 视觉鲁棒核函数参数（用于水下虚无区域的外点剔除）
+extern double VISUAL_LOSS_THRESHOLD;  // 视觉重投影误差阈值（像素）
+extern int USE_HARD_THRESHOLD;         // 是否使用硬阈值（超过阈值则权重为0）
 extern std::string IMU_TOPIC;
 extern std::string DVL_TOPIC;
 extern std::string DVL_POSITION_TOPIC;
 
 extern double TD;
+extern double TD_DVL;  // DVL时间偏移
 extern double TR;
 extern int ESTIMATE_TD;
 extern int ROLLING_SHUTTER;

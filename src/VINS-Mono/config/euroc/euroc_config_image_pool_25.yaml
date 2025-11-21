@@ -1,45 +1,45 @@
 %YAML:1.0
 
 #common parameters
-imu_topic: "/imu/data"
+imu_topic: "/dvs/imu"
 dvl_topic: "/dvl/velocity"
 dvl_position_topic: "/dvl/position"
-dvl_add: 1
-dvl_pose_add : 1
+dvl_add: 0
+dvl_pose_add : 0
 image_topic: "/dvs/image_raw"
 
-#pool
-#camera calibration 
-model_type: PINHOLE
-camera_name: camera
-image_width: 346
-image_height: 260
-distortion_parameters:
-   k1: -2.492e-01
-   k2: 2.849e-01
-   p1: 4.9208e-04
-   p2: 1.74106e-02
-projection_parameters:
-   fx: 5.96881e+02
-   fy: 5.96606e+02
-   cx: 1.66990e+02
-   cy: 1.27524e+02
-# #outdoor
-# # camera calibration 
+# #pool
+# #camera calibration 
 # model_type: PINHOLE
 # camera_name: camera
 # image_width: 346
 # image_height: 260
 # distortion_parameters:
-#    k1: -3.651e-01
-#    k2: 2.344e-01
+#    k1: -2.492e-01
+#    k2: 2.849e-01
 #    p1: 4.9208e-04
 #    p2: 1.74106e-02
 # projection_parameters:
-#    fx: 3.770703e+02
-#    fy: 3.769375e+02
-#    cx: 1.671955e+02
-#    cy: 1.283925e+02
+#    fx: 5.96881e+02
+#    fy: 5.96606e+02
+#    cx: 1.66990e+02
+#    cy: 1.27524e+02
+#outdoor
+# camera calibration 
+model_type: PINHOLE
+camera_name: camera
+image_width: 346
+image_height: 260
+distortion_parameters:
+   k1: -3.651e-01
+   k2: 2.344e-01
+   p1: 4.9208e-04
+   p2: 1.74106e-02
+projection_parameters:
+   fx: 3.770703e+02
+   fy: 3.769375e+02
+   cx: 1.671955e+02
+   cy: 1.283925e+02
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -54,34 +54,34 @@ estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trus
 #    data: [0.0, -1.0, 0.0,
 #           -1.0, 0.0, 0.0, 
 #           0.0, 0.0, -1.0]
-extrinsicRotation: !!opencv-matrix
-   rows: 3
-   cols: 3
-   dt: d
-   data: [0.0, -1.0, 0.0,
-          -1.0, 0.0, 0.0, 
-          0.0, 0.0, -1.0]
-#Translation from camera frame to imu frame, imu^T_cam
-extrinsicTranslation: !!opencv-matrix
-   rows: 3
-   cols: 1
-   dt: d
-   data: [-0.05,-0.1, 0.1]
-# data: [-0.05,-0.1, 0.1]
-
 # extrinsicRotation: !!opencv-matrix
 #    rows: 3
 #    cols: 3
 #    dt: d
-#    data: [1.0, 0.0, 0.0,
-#           0.0, 1.0, 0.0, 
-#           0.0, 0.0, 1.0]
+#    data: [0.0, -1.0, 0.0,
+#           -1.0, 0.0, 0.0, 
+#           0.0, 0.0, -1.0]
 # #Translation from camera frame to imu frame, imu^T_cam
 # extrinsicTranslation: !!opencv-matrix
 #    rows: 3
 #    cols: 1
 #    dt: d
-#    data: [0.0,0.0, 0.0]
+#    data: [-0.05,-0.1, 0.1]
+# data: [-0.05,-0.1, 0.1]
+
+extrinsicRotation: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [1.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 
+          0.0, 0.0, 1.0]
+#Translation from camera frame to imu frame, imu^T_cam
+extrinsicTranslation: !!opencv-matrix
+   rows: 3
+   cols: 1
+   dt: d
+   data: [0.0,0.0, 0.0]
 
 dvlpose_information_matrix: !!opencv-matrix
    rows: 6
@@ -113,9 +113,9 @@ dvl_information_matrix: !!opencv-matrix
 
 #feature traker paprameters
 max_cnt: 150            # max feature number in feature tracking
-min_dist: 10            # min distance between two features 
+min_dist: 20            # min distance between two features 
 freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
-F_threshold: 1.1     # ransac threshold (pixel) data_10.45 data_5 1.5 1
+F_threshold: 2.0     # ransac threshold (pixel) data_10.45 data_5 1.5 1
 show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
@@ -139,7 +139,7 @@ fast_relocalization: 0             # useful in real-time and large project
 pose_graph_save_path: "./output/pose_graph/" # save and load path
 
 #unsynchronization parameters
-estimate_td: 0                      # online estimate time offset between camera and imu
+estimate_td: 1                      # online estimate time offset between camera and imu
 td: 0.0                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 
 #rolling shutter parameters

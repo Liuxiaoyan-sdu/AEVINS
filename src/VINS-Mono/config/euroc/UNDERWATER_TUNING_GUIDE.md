@@ -152,6 +152,121 @@ cv::goodFeaturesToTrack(forw_img, n_pts, MAX_CNT - forw_pts.size(),
 
 ---
 
+---
+
+## 新增：视觉约束鲁棒核函数（针对虚无区域）
+
+### 问题场景
+水下前方虚无（无纹理、悬浮物、能见度极低）时，特征点匹配会产生大量误匹配，导致：
+- 重投影误差很大的"外点"参与优化
+- 优化结果被错误约束拉偏
+- 轨迹发散或漂移
+
+### 解决方案
+为视觉约束添加**鲁棒核函数**（Robust Kernel），当重投影误差超过阈值时：
+- **降低权重**（软核函数）：Cauchy/Saturated
+- **完全剔除**（硬阈值）：误差大的点权重=0，不参与优化
+
+### 配置参数 (canghewan.yaml)
+
+```yaml
+# 视觉约束鲁棒核函数参数
+visual_loss_threshold: 5.0  # 重投影误差阈值（像素）
+use_hard_threshold: 1       # 核函数类型
+```
+
+#### `visual_loss_threshold` (重投影误差阈值)
+**作用**: 判断特征点是否为外点的阈值（像素）
+
+**调优建议**:
+- 正常水下环境：**3.0-5.0**
+- 虚无严重（能见度很低）：**5.0-8.0**
+- 水质清澈：**2.0-3.0**
+
+**调试步骤**:
+```yaml
+# 保守策略（严重虚无，大量误匹配）
+visual_loss_threshold: 8.0
+
+# 平衡策略（推荐）
+visual_loss_threshold: 5.0
+
+# 激进策略（水质好，担心丢失正确匹配）
+visual_loss_threshold: 3.0
+```
+
+#### `use_hard_threshold` (核函数类型)
+**作用**: 选择如何处理超过阈值的误差
+
+**选项说明**:
+- **0: Cauchy软核函数**（默认）
+  - 对大误差降权但不完全剔除
+  - 数学形式: ρ(s) = log(1 + s/c²)
+  - 优点: 平滑，对噪声容忍度高
+  - 缺点: 极端外点仍有小权重
+  
+- **1: 硬阈值**（推荐用于虚无区域）
+  - 超过阈值的残差权重=0，完全不参与优化
+  - 数学形式: ρ(s) = s (if s<c²), ρ(s) = c² (if s≥c²)
+  - 优点: 彻底剔除误匹配
+  - 缺点: 不连续，可能影响收敛
+  
+- **2: 饱和损失**（平滑过渡）
+  - 在阈值附近平滑降权
+  - 数学形式: ρ(s) = 2c²(√(1+s/c²) - 1)
+  - 优点: 兼顾鲁棒性和平滑性
+  - 缺点: 调参稍复杂
+
+**推荐配置**:
+```yaml
+# 虚无严重，需要激进剔除
+use_hard_threshold: 1
+visual_loss_threshold: 6.0
+
+# 中等环境，平滑处理
+use_hard_threshold: 2
+visual_loss_threshold: 4.0
+
+# 水质较好，保守处理
+use_hard_threshold: 0
+visual_loss_threshold: 3.0
+```
+
+### 验证效果
+
+1. **查看优化残差**:
+```bash
+# 启动后观察终端输出
+# 会打印使用的损失函数类型和阈值
+[INFO] Using HardThresholdLoss with threshold: 5.00 pixels
+```
+
+2. **对比轨迹精度**:
+```bash
+# 录制rosbag，分别用不同参数运行，对比轨迹
+rosbag record /vins_estimator/odometry /vins_estimator/path -O test_loss_func.bag
+```
+
+3. **可视化特征点**:
+- 观察 `/feature_tracker/feature_img` 话题
+- 误匹配的特征点应该被剔除，不再影响轨迹
+
+### 与特征跟踪参数的配合
+
+**组合策略**（针对虚无区域）:
+```yaml
+# 特征跟踪层面：减少误提取
+max_cnt: 60              # 减少特征点数量
+min_dist: 20             # 增大间距
+F_threshold: 1.8         # 严格RANSAC
+
+# 优化层面：剔除误匹配
+visual_loss_threshold: 6.0  # 大阈值
+use_hard_threshold: 1       # 硬剔除
+```
+
+---
+
 ## 推荐调优流程
 
 ### 阶段1: 快速配置 (仅修改YAML，无需重新编译)
@@ -236,6 +351,7 @@ rosrun tools image_preprocessor_node.py \
 
 | 参数 | 原始值 | 保守值 | 推荐值 | 激进值 | 说明 |
 |------|--------|--------|--------|--------|------|
+| **特征跟踪** | | | | | |
 | max_cnt | 100 | 60 | 80 | 100 | 特征点数量 |
 | min_dist | 10 | 20 | 15 | 12 | 特征点间距 |
 | F_threshold | 1.0 | 1.8 | 1.5 | 1.2 | 图像RANSAC阈值 |
@@ -244,6 +360,9 @@ rosrun tools image_preprocessor_node.py \
 | CLAHE clipLimit | 3.0 | 2.0 | 2.5 | 3.5 | 对比度增强强度 (代码修改) |
 | 角点质量阈值 | 0.01 | 0.03 | 0.02 | 0.015 | goodFeaturesToTrack (代码修改) |
 | 光流窗口 | 21 | 31 | 25 | 21 | calcOpticalFlowPyrLK (代码修改) |
+| **优化鲁棒性（新增）** | | | | | |
+| visual_loss_threshold | 1.0 | 8.0 | 5.0 | 3.0 | 视觉约束误差阈值（像素） |
+| use_hard_threshold | - | 1 | 1 | 0 | 核函数类型（0=Cauchy, 1=硬阈值, 2=饱和） |
 
 ---
 

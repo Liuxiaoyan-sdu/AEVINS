@@ -32,7 +32,11 @@ std::string IMU_TOPIC;
 std::string DVL_POSITION_TOPIC;
 std::string DVL_TOPIC;  
 double ROW, COL;
-double TD, TR;
+double TD, TD_DVL, TR;
+
+// 视觉鲁棒核函数参数
+double VISUAL_LOSS_THRESHOLD = 3.0;  // 默认3.0像素
+int USE_HARD_THRESHOLD = 0;           // 默认使用软核函数（Cauchy）
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -154,6 +158,29 @@ void readParameters(ros::NodeHandle &n)
     COL = fsSettings["image_width"];
     ROS_INFO("ROW: %f COL: %f ", ROW, COL);
 
+    // 读取视觉鲁棒核函数参数（水下虚无区域外点剔除）
+    if (fsSettings["visual_loss_threshold"].isReal())
+    {
+        VISUAL_LOSS_THRESHOLD = fsSettings["visual_loss_threshold"];
+        ROS_INFO("Visual loss threshold: %f pixels", VISUAL_LOSS_THRESHOLD);
+    }
+    else
+    {
+        VISUAL_LOSS_THRESHOLD = 3.0;  // 默认3.0像素
+        ROS_WARN("visual_loss_threshold not found, using default: 3.0 pixels");
+    }
+
+    if (fsSettings["use_hard_threshold"].isInt())
+    {
+        USE_HARD_THRESHOLD = (int)fsSettings["use_hard_threshold"];
+        ROS_INFO("Use hard threshold: %d", USE_HARD_THRESHOLD);
+    }
+    else
+    {
+        USE_HARD_THRESHOLD = 0;  // 默认使用软核函数
+        ROS_WARN("use_hard_threshold not found, using default: 0 (soft loss)");
+    }
+
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)
     {
@@ -199,6 +226,18 @@ void readParameters(ros::NodeHandle &n)
         ROS_INFO_STREAM("Unsynchronized sensors, online estimate time offset, initial td: " << TD);
     else
         ROS_INFO_STREAM("Synchronized sensors, fix time offset: " << TD);
+
+    // 读取DVL时间偏移参数
+    if (fsSettings["td_dvl"].isReal())
+    {
+        TD_DVL = fsSettings["td_dvl"];
+        ROS_INFO_STREAM("DVL time offset: " << TD_DVL);
+    }
+    else
+    {
+        TD_DVL = 0.0;
+        ROS_WARN("td_dvl not found in config, using default: 0.0");
+    }
 
     ROLLING_SHUTTER = fsSettings["rolling_shutter"];
     if (ROLLING_SHUTTER)

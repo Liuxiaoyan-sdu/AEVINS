@@ -19,6 +19,7 @@
 #include "factor/projection_factor.h"
 #include "factor/projection_td_factor.h"
 #include "factor/marginalization_factor.h"
+#include "factor/robust_loss.h"
 
 #include <unordered_map>
 #include <queue>

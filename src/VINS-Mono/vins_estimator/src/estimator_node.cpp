@@ -211,20 +211,20 @@ getMeasurements()
         }
         //在这里查找DVL的信息
         if(DVL_ADD){
-            if(!(velocity_buf.back()->header.stamp.toSec() > feature_buf.front()->header.stamp.toSec() + estimator.td)){
+            if(!(velocity_buf.back()->header.stamp.toSec() > feature_buf.front()->header.stamp.toSec() + estimator.td + TD_DVL)){
                 return measurements;
             }
-            if (!(velocity_buf.front()->header.stamp.toSec() < feature_buf.front()->header.stamp.toSec() + estimator.td)){
+            if (!(velocity_buf.front()->header.stamp.toSec() < feature_buf.front()->header.stamp.toSec() + estimator.td + TD_DVL)){
             ROS_WARN("throw img, only should happen at the beginning");
             feature_buf.pop();
             continue;
             }
         }
         if(DVL_POSE_ADD){
-            if(!(dvl_position_buf.back()->header.stamp.toSec() > feature_buf.front()->header.stamp.toSec() + estimator.td)){
+            if(!(dvl_position_buf.back()->header.stamp.toSec() > feature_buf.front()->header.stamp.toSec() + estimator.td + TD_DVL)){
                 return measurements;
             }
-            if (!(dvl_position_buf.front()->header.stamp.toSec() < feature_buf.front()->header.stamp.toSec() + estimator.td)){
+            if (!(dvl_position_buf.front()->header.stamp.toSec() < feature_buf.front()->header.stamp.toSec() + estimator.td + TD_DVL)){
             ROS_WARN("throw img, only should happen at the beginning");
             feature_buf.pop();
             continue;
@@ -255,21 +255,21 @@ getMeasurements()
 
         geometry_msgs::Vector3StampedConstPtr velocity_msg ;
         if(DVL_ADD){
-            while (velocity_buf.front()->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td && velocity_buf[1]->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td)
+            while (velocity_buf.front()->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td + TD_DVL && velocity_buf[1]->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td + TD_DVL)
             {
                velocity_buf.pop_front();
             }
-            velocity_msg = interpolateDVL(velocity_buf[0],velocity_buf[1],img_msg->header.stamp.toSec());
+            velocity_msg = interpolateDVL(velocity_buf[0],velocity_buf[1],img_msg->header.stamp.toSec() + TD_DVL);
         }else{
             velocity_msg = nullptr;
         }
         nav_msgs::Odometry::ConstPtr position_msg ;
         if(DVL_POSE_ADD){
-            while (dvl_position_buf.front()->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td && dvl_position_buf[1]->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td)
+            while (dvl_position_buf.front()->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td + TD_DVL && dvl_position_buf[1]->header.stamp.toSec() < img_msg->header.stamp.toSec() + estimator.td + TD_DVL)
             {
                dvl_position_buf.pop_front();
             }
-            position_msg = interpolateOdometry(dvl_position_buf[0],dvl_position_buf[1],img_msg->header.stamp.toSec());
+            position_msg = interpolateOdometry(dvl_position_buf[0],dvl_position_buf[1],img_msg->header.stamp.toSec() + TD_DVL);
         }else{
             position_msg = nullptr;
         }
