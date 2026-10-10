@@ -17,7 +17,16 @@ public:
                    const Eigen::Vector3d& omega,          // IMU的角速度（IMU坐标系）
                    const Eigen::Matrix3d& information)    // 信息矩阵
         : v_dvl_(v_dvl), R_dvl_to_imu_(R_dvl_to_imu), t_dvl_to_imu_(t_dvl_to_imu),
-          Qi_(Qi), omega_(omega), sqrt_info_(information.llt().matrixL().transpose()) {}
+          Qi_(Qi), omega_(omega), sqrt_info_(information.llt().matrixL().transpose()) {
+        // 计算sqrt_info的有效尺度（取对角线最大值）
+        sqrt_info_scale_ = sqrt_info_.diagonal().maxCoeff();
+    }
+
+    // 获取调整后的柯西损失参数
+    // 由于残差被sqrt_info_放大，柯西参数也应该相应放大
+    double GetAdjustedCauchyScale(double original_scale) const {
+        return original_scale * sqrt_info_scale_;
+    }
 
     virtual bool Evaluate(double const* const* parameters, double* residuals, double** jacobians) const {
         // 参数：para_SpeedBias[9] = [v_world(3), ba(3), bg(3)]
@@ -71,4 +80,5 @@ private:
     Eigen::Quaterniond Qi_;          // IMU姿态
     Eigen::Vector3d omega_;          // IMU角速度
     Eigen::Matrix3d sqrt_info_;      // 信息矩阵的Cholesky分解
+    double sqrt_info_scale_;         // sqrt_info对角线的最大值，用于调整柯西损失参数
 };

@@ -81,7 +81,7 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
     ${OpenCL_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
-    /home/lxy/vins_mono_ws/src/VINS-Mono/feature_tracker/src/line_descriptor/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../feature_tracker/src/line_descriptor/include
 )
 
 link_directories(${PCL_LIBRARY_DIRS})

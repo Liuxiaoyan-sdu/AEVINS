@@ -3,6 +3,7 @@
     <arg name="config_path" default = "$(find feature_tracker)/../config/euroc/sea3.yaml" />
 	  <arg name="vins_path" default = "$(find feature_tracker)/../config/../" />
     <arg name="input_file"  default=""/>
+    <arg name="enable_rviz" default="true"/>
 
     <node name="imu2dvl" pkg="tools" type="imu2dvl.py" output="screen">
        <param name="config_file" type="string" value="$(arg config_path)" />
@@ -34,7 +35,7 @@
           args="compressed in:=/dvs/image_raw raw out:=/dvs/image_raw" 
           output="log" />
 
-    <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find vins_estimator)/../config/vins_rviz_config.rviz" />
+    <node if="$(arg enable_rviz)" name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find vins_estimator)/../config/vins_rviz_config.rviz" />
 
 </launch>
 

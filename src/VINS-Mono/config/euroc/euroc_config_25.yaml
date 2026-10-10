@@ -1,18 +1,18 @@
 %YAML:1.0
 
 #common parameters
-imu_topic: "/imu/data"
+imu_topic: "/dvs/imu"
 dvl_topic: "/dvl/velocity"
 dvl_position_topic: "/dvl/position"
 dvl_add: 1
-dvl_pose_add : 1
+dvl_pose_add : 0
 # image_topic: "/bf/additional/image0"
 # output_path: "./output/"
 # #add_mine
 image0_topic: "/dvs/event_image"
 image1_topic: "/dvs/image_raw"
-cam0_calib: "cam0_pinhole.yaml"
-cam1_calib: "cam1_pinhole.yaml"
+cam0_calib: "cam0_pinhole_pool_1.yaml"
+cam1_calib: "cam1_pinhole_pool_1.yaml"
 image_width: 346
 image_height: 260
 
@@ -27,21 +27,21 @@ extrinsicRotation: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [0.0, -1.0, 0.0,
-          -1.0, 0.0, 0.0, 
-          0.0, 0.0, -1.0]
+   data: [ 1.0,   0.0,  0.0,  
+            0.0,  1.0,  0.0,   
+            0.0,  0.0,  1.0]
 #Translation from camera frame to imu frame, imu^T_cam
 extrinsicTranslation: !!opencv-matrix
    rows: 3
    cols: 1
    dt: d
-   data: [-0.05,-0.1, 0.1]
+   data: [0.001, 0.002, 0.003]
 
 dvlpose_information_matrix: !!opencv-matrix
    rows: 6
    cols: 1
    dt: d
-   data: [90000, 90000, 90000, 0, 0, 0]
+   data: [1000, 1000, 1000, 0, 0, 0]
 
 tdvltoimu: !!opencv-matrix
    rows: 3
@@ -53,27 +53,52 @@ rdvltoimu: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [-1.0, 0.0, 0.0,
-          0.0, 1.0, 0.0, 
-          0.0, 0.0, -1.0]
+   data: [0.0, -1.0, 0.0,
+          1.0, 0.0, 0.0, 
+          0.0, 0.0, 1.0]
+
 # DVL 信息矩阵 (3x3-)
 dvl_information_matrix: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [40000.0, 0.0, 0.0,
-          0.0, 40000.0, 0.0, 
-          0.0, 0.0, 40000.0]
+   data: [10000000.0, 0.0, 0.0,
+          0.0, 10000000.0, 0.0, 
+          0.0, 0.0, 10000000.0]
+
 
 #feature traker paprameters
 max_cnt: 150            # max feature number in feature tracking
 min_dist: 10            # min distance between two features 
-freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
-F_threshold: 0.05        # ransac threshold (pixel)   第1、0.5 data_5_1.5 data_6 1.3
-F_threshold_1: 1
+freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 1.5
+F_threshold: 2.0       # imageransac threshold (pixel)   第1、0.5  1.5
+F_threshold_1: 0.7     #event                                     0.7
 show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
+
+# 视觉约束鲁棒核函数参数（水下虚无区域外点剔除）
+visual_loss_threshold: 1.0  # 视觉重投影误差阈值（像素），超过此值降低权重或设为0
+                            # 水下环境建议: 3.0-8.0，虚无严重时用更大值（5.0-8.0）
+use_hard_threshold: 0       # 0: Cauchy软核函数（默认，平滑降权）
+                            # 1: 硬阈值（超过阈值权重=0，激进剔除）
+                            # 2: 饱和损失（平滑过渡，介于两者之间）
+
+
+#event feature parameters
+use_event_compensation: 1  # 0: use uncompensated event frame (direct accumulation), 1: use motion-compensated event frame (better_flow)
+use_dynamic_window:       # 0: use fixed event count, 1: use adaptive dynamic window for event collection
+use_image_features: 1      # 0: disable image features, 1: enable image features (from normal camera)
+use_event_features: 0      # 0: disable event features, 1: enable event features (from event camera)
+
+# Dynamic window parameters (for event collection)
+min_event_count: 2000      # Minimum event count threshold: collect events only if count >= this value
+max_event_count: 20000     # Maximum event count (upper limit for collection)
+initial_event_count: 12000  # Initial event count for first frame
+alpha: 0.001                 # Adaptive coefficient α for dynamic window
+min_pixel_ratio: 0.2       # Minimum pixel ratio (20%)
+event_history_size: 1000000 # Event history buffer size
+interval_time_ns: 100000000 # Time interval in nanoseconds (80ms)
 
 #optimization parameters
 max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time
@@ -96,6 +121,7 @@ pose_graph_save_path: "./output/pose_graph/" # save and load path
 #unsynchronization parameters
 estimate_td: 0                      # online estimate time offset between camera and imu
 td: 0.0                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
+td_dvl: 0.0                         # time offset between DVL and image. unit: s. DVL clock + td_dvl = image clock
 
 #rolling shutter parameters
 rolling_shutter: 0                  # 0: global shutter camera, 1: rolling shutter camera

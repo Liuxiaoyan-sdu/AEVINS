@@ -3,6 +3,7 @@
 #include <ros/ros.h>
 #include <std_msgs/Header.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Float64.h>
 #include <std_msgs/Bool.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud.h>
@@ -27,6 +28,9 @@ extern ros::Publisher pub_ref_pose, pub_cur_pose;
 extern ros::Publisher pub_key;
 extern nav_msgs::Path path;
 extern ros::Publisher pub_pose_graph;
+extern ros::Publisher pub_backend_opt_time;
+extern ros::Publisher pub_backend_whole_time;
+extern ros::Publisher pub_imu_no_gravity;  // /vins_estimator/imu_no_gravity
 extern int IMAGE_ROW, IMAGE_COL;
 
 void registerPub(ros::NodeHandle &n);
@@ -50,3 +54,13 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header);
 void pubKeyframe(const Estimator &estimator);
 
 void pubRelocalization(const Estimator &estimator);
+
+void pubBackendOptTime(double solver_time_ms, const std_msgs::Header &header);
+
+void pubBackendWholeTime(double whole_time_ms, const std_msgs::Header &header);
+
+// 发布去除重力后的IMU加速度（世界坐标系）
+// linear_acc_no_gravity = R * (acc_raw - Ba) - g
+void pubImuNoGravity(const Eigen::Vector3d &linear_acc_no_gravity,
+                     const Eigen::Vector3d &angular_velocity,
+                     const std_msgs::Header &header);

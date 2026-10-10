@@ -14,6 +14,9 @@ nav_msgs::Path path, relo_path;
 ros::Publisher pub_keyframe_pose;
 ros::Publisher pub_keyframe_point;
 ros::Publisher pub_extrinsic;
+ros::Publisher pub_backend_opt_time;
+ros::Publisher pub_backend_whole_time;
+ros::Publisher pub_imu_no_gravity;
 
 CameraPoseVisualization cameraposevisual(0, 1, 0, 1);
 CameraPoseVisualization keyframebasevisual(0.0, 0.0, 1.0, 1.0);
@@ -35,6 +38,9 @@ void registerPub(ros::NodeHandle &n)
     pub_keyframe_point = n.advertise<sensor_msgs::PointCloud>("keyframe_point", 1000);
     pub_extrinsic = n.advertise<nav_msgs::Odometry>("extrinsic", 1000);
     pub_relo_relative_pose=  n.advertise<nav_msgs::Odometry>("relo_relative_pose", 1000);
+    pub_backend_opt_time = n.advertise<std_msgs::Float64>("/vins_backend/opt_time", 100);
+    pub_backend_whole_time = n.advertise<std_msgs::Float64>("/vins_backend/whole_time", 100);
+    pub_imu_no_gravity = n.advertise<sensor_msgs::Imu>("/vins_estimator/imu_no_gravity", 1000);
 
     cameraposevisual.setScale(1);
     cameraposevisual.setLineWidth(0.05);
@@ -417,6 +423,40 @@ void pubRelocalization(const Estimator &estimator)
     odometry.pose.pose.orientation.w = estimator.relo_relative_q.w();
     odometry.twist.twist.linear.x = estimator.relo_relative_yaw;
     odometry.twist.twist.linear.y = estimator.relo_frame_index;
-
+    // publish relocalization message
     pub_relo_relative_pose.publish(odometry);
+}
+
+void pubBackendOptTime(double solver_time_ms, const std_msgs::Header &header)
+{
+    std_msgs::Float64 msg;
+    msg.data = solver_time_ms;
+    pub_backend_opt_time.publish(msg);
+}
+
+void pubBackendWholeTime(double whole_time_ms, const std_msgs::Header &header)
+{
+    std_msgs::Float64 msg;
+    msg.data = whole_time_ms;
+    pub_backend_whole_time.publish(msg);
+}
+
+void pubImuNoGravity(const Eigen::Vector3d &linear_acc_no_gravity,
+                     const Eigen::Vector3d &angular_velocity,
+                     const std_msgs::Header &header)
+{
+    if (pub_imu_no_gravity.getNumSubscribers() == 0)
+        return;
+    sensor_msgs::Imu imu_msg;
+    imu_msg.header = header;
+    imu_msg.header.frame_id = "world";
+    // 去除重力后的线加速度（世界坐标系）
+    imu_msg.linear_acceleration.x = linear_acc_no_gravity.x();
+    imu_msg.linear_acceleration.y = linear_acc_no_gravity.y();
+    imu_msg.linear_acceleration.z = linear_acc_no_gravity.z();
+    // 角速度（去除陀螺零偏，IMU坐标系）
+    imu_msg.angular_velocity.x = angular_velocity.x();
+    imu_msg.angular_velocity.y = angular_velocity.y();
+    imu_msg.angular_velocity.z = angular_velocity.z();
+    pub_imu_no_gravity.publish(imu_msg);
 }

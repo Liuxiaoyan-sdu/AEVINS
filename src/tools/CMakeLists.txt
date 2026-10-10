@@ -161,7 +161,9 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/imu2dvl.py
+  scripts/imu2dvl_river.py
   scripts/image_preprocessor_node.py
+  scripts/image_darkener_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

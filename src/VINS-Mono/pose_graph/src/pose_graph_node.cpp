@@ -48,6 +48,8 @@ int DEBUG_IMAGE;
 int VISUALIZE_IMU_FORWARD;
 int LOOP_CLOSURE;
 int FAST_RELOCALIZATION;
+int SAVE_LOOP_MATCH_IMAGES;
+double DATASET_START_TIME = -1.0;
 
 camodocal::CameraPtr m_camera;
 Eigen::Vector3d tic;
@@ -62,6 +64,10 @@ nav_msgs::Path no_loop_path;
 std::string BRIEF_PATTERN_FILE;
 std::string POSE_GRAPH_SAVE_PATH;
 std::string VINS_RESULT_PATH;
+std::string LOOP_MATCH_IMAGE_PATH;
+int MIN_LOOP_NUM = 25;
+double LOOP_NEIGHBOR_SCORE = 0.05;
+double LOOP_CANDIDATE_SCORE = 0.015;
 CameraPoseVisualization cameraposevisual(1, 0, 0, 1);
 Eigen::Vector3d last_t(-100, -100, -100);
 double last_image_time = -1;
@@ -95,6 +101,8 @@ void image_callback(const sensor_msgs::ImageConstPtr &image_msg)
     //ROS_INFO("image_callback!");
     if(!LOOP_CLOSURE)
         return;
+    if (DATASET_START_TIME < 0.0)
+        DATASET_START_TIME = image_msg->header.stamp.toSec();
     m_buf.lock();
     image_buf.push(image_msg);
     m_buf.unlock();
@@ -495,15 +503,51 @@ int main(int argc, char **argv)
         fsSettings["pose_graph_save_path"] >> POSE_GRAPH_SAVE_PATH;
         fsSettings["output_path"] >> VINS_RESULT_PATH;
         fsSettings["save_image"] >> DEBUG_IMAGE;
+        fsSettings["save_loop_match_images"] >> SAVE_LOOP_MATCH_IMAGES;
+        if (!fsSettings["loop_min_inliers"].empty())
+            MIN_LOOP_NUM = static_cast<int>(fsSettings["loop_min_inliers"]);
+        if (!fsSettings["loop_neighbor_score"].empty())
+            LOOP_NEIGHBOR_SCORE = static_cast<double>(fsSettings["loop_neighbor_score"]);
+        if (!fsSettings["loop_candidate_score"].empty())
+            LOOP_CANDIDATE_SCORE = static_cast<double>(fsSettings["loop_candidate_score"]);
+        ROS_INFO("Loop thresholds: min inliers > %d, neighbor score > %.3f, candidate score > %.3f",
+                 MIN_LOOP_NUM, LOOP_NEIGHBOR_SCORE, LOOP_CANDIDATE_SCORE);
+
+        // Loop-match images require the keyframe pixels to be retained.
+        if (SAVE_LOOP_MATCH_IMAGES)
+            DEBUG_IMAGE = 1;
 
         // create folder if not exists
         FileSystemHelper::createDirectoryIfNotExists(POSE_GRAPH_SAVE_PATH.c_str());
         FileSystemHelper::createDirectoryIfNotExists(VINS_RESULT_PATH.c_str());
+        LOOP_MATCH_IMAGE_PATH = POSE_GRAPH_SAVE_PATH;
+        if (!LOOP_MATCH_IMAGE_PATH.empty() && LOOP_MATCH_IMAGE_PATH.back() != '/')
+            LOOP_MATCH_IMAGE_PATH += "/";
+        LOOP_MATCH_IMAGE_PATH += "loop_matches";
+        std::string loop_match_image_path_override;
+        n.param<std::string>("loop_match_image_path", loop_match_image_path_override, "");
+        if (!loop_match_image_path_override.empty())
+            LOOP_MATCH_IMAGE_PATH = loop_match_image_path_override;
+        std::string input_bag_file;
+        n.param<std::string>("input_file", input_bag_file, "");
+        if (!input_bag_file.empty())
+        {
+            const size_t slash = input_bag_file.find_last_of("/\\");
+            std::string bag_name = input_bag_file.substr(slash == std::string::npos ? 0 : slash + 1);
+            if (bag_name.size() > 4 && bag_name.substr(bag_name.size() - 4) == ".bag")
+                bag_name.erase(bag_name.size() - 4);
+            if (!LOOP_MATCH_IMAGE_PATH.empty() && LOOP_MATCH_IMAGE_PATH.back() != '/')
+                LOOP_MATCH_IMAGE_PATH += "/";
+            LOOP_MATCH_IMAGE_PATH += bag_name;
+        }
+        if (SAVE_LOOP_MATCH_IMAGES)
+            FileSystemHelper::createDirectoryIfNotExists(LOOP_MATCH_IMAGE_PATH.c_str());
 
         VISUALIZE_IMU_FORWARD = fsSettings["visualize_imu_forward"];
         LOAD_PREVIOUS_POSE_GRAPH = fsSettings["load_previous_pose_graph"];
         FAST_RELOCALIZATION = fsSettings["fast_relocalization"];
-        VINS_RESULT_PATH = VINS_RESULT_PATH + "/vins_result_loop.csv";
+        // Save the loop-corrected trajectory beside this bag's loop images.
+        VINS_RESULT_PATH = LOOP_MATCH_IMAGE_PATH + "/trajectory_loop.tum";
         std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
         fout.close();
         fsSettings.release();

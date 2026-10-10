@@ -18,6 +18,9 @@ Eigen::Vector3d G{0.0, 0.0, 9.8};
 
 int DVL_ADD;
 int DVL_POSE_ADD ;
+int USE_DVL_CAUCHY_LOSS = 0;
+double DVL_CAUCHY_SCALE = 0.5;
+int DVL_CAUCHY_DELAY_FRAMES = 20;  // 初始化后延迟20帧才启用柯西损失
 
 double BIAS_ACC_THRESHOLD;
 double BIAS_GYR_THRESHOLD;
@@ -72,6 +75,15 @@ void readParameters(ros::NodeHandle &n)
     DVL_POSE_ADD = fsSettings["dvl_pose_add"];
     ROS_INFO("DVL_ADD: %d", DVL_ADD);
     ROS_INFO("DVL_POSE_ADD: %d", DVL_POSE_ADD);
+    // 读取DVL损失函数参数
+    if (fsSettings["use_dvl_cauchy_loss"].isInt())
+        USE_DVL_CAUCHY_LOSS = fsSettings["use_dvl_cauchy_loss"];
+    if (fsSettings["dvl_cauchy_scale"].isReal())
+        DVL_CAUCHY_SCALE = fsSettings["dvl_cauchy_scale"];
+    if (fsSettings["dvl_cauchy_delay_frames"].isInt())
+        DVL_CAUCHY_DELAY_FRAMES = fsSettings["dvl_cauchy_delay_frames"];
+    ROS_INFO("USE_DVL_CAUCHY_LOSS: %d, DVL_CAUCHY_SCALE: %.4f, DELAY_FRAMES: %d", 
+             USE_DVL_CAUCHY_LOSS, DVL_CAUCHY_SCALE, DVL_CAUCHY_DELAY_FRAMES);
     if (DVL_ADD == 1||DVL_POSE_ADD == 1)
     {
         fsSettings["dvl_topic"] >> DVL_TOPIC;

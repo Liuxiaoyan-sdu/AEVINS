@@ -15,8 +15,6 @@
 #include <opencv2/imgproc/types_c.h>
 #include <opencv2/imgproc/imgproc_c.h>
 
-#define MIN_LOOP_NUM 25
-
 using namespace Eigen;
 using namespace std;
 using namespace DVision;
@@ -103,4 +101,3 @@ public:
 	int loop_index;
 	Eigen::Matrix<double, 8, 1 > loop_info;
 };
-

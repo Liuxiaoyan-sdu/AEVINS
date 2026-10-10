@@ -152,17 +152,12 @@ void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
     {
         ofstream loop_path_file(VINS_RESULT_PATH, ios::app);
         loop_path_file.setf(ios::fixed, ios::floatfield);
-        loop_path_file.precision(0);
-        loop_path_file << cur_kf->time_stamp * 1e9 << ",";
-        loop_path_file.precision(5);
-        loop_path_file  << P.x() << ","
-              << P.y() << ","
-              << P.z() << ","
-              << Q.w() << ","
-              << Q.x() << ","
-              << Q.y() << ","
-              << Q.z() << ","
-              << endl;
+        loop_path_file.precision(9);
+        loop_path_file << cur_kf->time_stamp << " ";
+        loop_path_file.precision(6);
+        loop_path_file << P.x() << " " << P.y() << " " << P.z() << " "
+                       << Q.x() << " " << Q.y() << " " << Q.z() << " " << Q.w()
+                       << endl;
         loop_path_file.close();
     }
     //draw local connection
@@ -345,11 +340,11 @@ int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
         }
     }
     // a good match with its nerghbour
-    if (ret.size() >= 1 &&ret[0].Score > 0.05)
+    if (ret.size() >= 1 && ret[0].Score > LOOP_NEIGHBOR_SCORE)
         for (unsigned int i = 1; i < ret.size(); i++)
         {
             //if (ret[i].Score > ret[0].Score * 0.3)
-            if (ret[i].Score > 0.015)
+            if (ret[i].Score > LOOP_CANDIDATE_SCORE)
             {
                 find_loop = true;
                 int tmp_index = ret[i].Id;
@@ -375,7 +370,7 @@ int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
         int min_index = -1;
         for (unsigned int i = 0; i < ret.size(); i++)
         {
-            if (min_index == -1 || (ret[i].Id < min_index && ret[i].Score > 0.015))
+            if (min_index == -1 || (ret[i].Id < min_index && ret[i].Score > LOOP_CANDIDATE_SCORE))
                 min_index = ret[i].Id;
         }
         return min_index;
@@ -629,17 +624,12 @@ void PoseGraph::updatePath()
         {
             ofstream loop_path_file(VINS_RESULT_PATH, ios::app);
             loop_path_file.setf(ios::fixed, ios::floatfield);
-            loop_path_file.precision(0);
-            loop_path_file << (*it)->time_stamp * 1e9 << ",";
-            loop_path_file.precision(5);
-            loop_path_file  << P.x() << ","
-                  << P.y() << ","
-                  << P.z() << ","
-                  << Q.w() << ","
-                  << Q.x() << ","
-                  << Q.y() << ","
-                  << Q.z() << ","
-                  << endl;
+            loop_path_file.precision(9);
+            loop_path_file << (*it)->time_stamp << " ";
+            loop_path_file.precision(6);
+            loop_path_file << P.x() << " " << P.y() << " " << P.z() << " "
+                           << Q.x() << " " << Q.y() << " " << Q.z() << " " << Q.w()
+                           << endl;
             loop_path_file.close();
         }
         //draw local connection

@@ -1,6 +1,6 @@
 <launch>
   <arg name="output_type" default="screen"/>
-  <arg name="config_path" default="/home/lxy/vins_mono_ws/src/VINS-Mono/feature_tracker_event/euroc/euroc_config_25.yaml"/>
+  <arg name="config_path" default="$(find feature_tracker_event)/euroc/euroc_config_25.yaml"/>
   <arg name="input_file"  default=""/>
   <arg name="vins_path" default="$(find feature_tracker_event)/../"/>
 

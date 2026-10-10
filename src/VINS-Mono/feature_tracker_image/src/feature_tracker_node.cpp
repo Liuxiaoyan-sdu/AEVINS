@@ -34,7 +34,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
     }
 
     // 将 ROS 图像消息转换为 OpenCV 格式
-    cv_bridge::CvImageConstPtr ptr;
+    cv_bridge::CvImagePtr ptr;
     if (img_msg->encoding == "8UC1")
     {
         sensor_msgs::Image img;
@@ -58,11 +58,13 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
         return; // 丢弃该帧
     }
 
-    // 检查图像尺寸是否符合预期（假设使用 COL 和 ROW 参数）
+    // Some AquaTriV bags briefly switch the DVS width from 346 to 344 pixels.
+    // Normalize such frames to the calibrated resolution instead of dropping
+    // them and breaking VINS initialization / tracking continuity.
     if (ptr->image.cols != COL || ptr->image.rows != ROW * NUM_OF_CAM) {
-        ROS_ERROR("Image size mismatch: expected %dx%d, got %dx%d",
-                  COL, ROW * NUM_OF_CAM, ptr->image.cols, ptr->image.rows);
-        return; // 丢弃该帧
+        ROS_WARN_THROTTLE(5.0, "Image size mismatch: expected %dx%d, got %dx%d; resizing",
+                          COL, ROW * NUM_OF_CAM, ptr->image.cols, ptr->image.rows);
+        cv::resize(ptr->image, ptr->image, cv::Size(COL, ROW * NUM_OF_CAM), 0, 0, cv::INTER_LINEAR);
     }
 
     // 验证 ROW 参数是否有效

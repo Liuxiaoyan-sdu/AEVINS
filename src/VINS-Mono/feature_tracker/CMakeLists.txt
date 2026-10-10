@@ -27,7 +27,7 @@ find_package(Eigen3)
 include_directories(
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
-  /home/lxy/vins_mono_ws/src/VINS-Mono/feature_tracker/src/line_descriptor/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/line_descriptor/include
 )
 
 add_executable(feature_tracker
@@ -37,4 +37,3 @@ add_executable(feature_tracker
     )
 
 target_link_libraries(feature_tracker ${catkin_LIBRARIES} ${OpenCV_LIBS})
-

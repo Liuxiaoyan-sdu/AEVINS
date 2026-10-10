@@ -24,5 +24,9 @@ extern int COL;
 extern std::string VINS_RESULT_PATH;
 extern int DEBUG_IMAGE;
 extern int FAST_RELOCALIZATION;
-
-
+extern int SAVE_LOOP_MATCH_IMAGES;
+extern double DATASET_START_TIME;
+extern std::string LOOP_MATCH_IMAGE_PATH;
+extern int MIN_LOOP_NUM;
+extern double LOOP_NEIGHBOR_SCORE;
+extern double LOOP_CANDIDATE_SCORE;

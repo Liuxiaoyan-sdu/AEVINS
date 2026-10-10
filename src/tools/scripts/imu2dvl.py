@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 DVL数据转换节点
 功能：将DVL发布的Imu消息转换为标准ROS消息格式

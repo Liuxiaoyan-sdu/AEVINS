@@ -1,7 +1,37 @@
-.catkin_tools/
-.catkin_workspace
+# Catkin/CMake build products
+/build/
+/devel/
+/install/
+/logs/
+/.catkin_tools/
+/.catkin_workspace
+**/build/
+**/devel/
+**/install/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+
+# Editor and local environment files
 .vscode/
-src/VINS-Mono/support_files/
-build/
-devel/
+.idea/
+.DS_Store
+*~
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Runtime output and datasets
+*.bag
+*.active
+*.csv.active
+/data/
+/result/
+/results/
+
+# Local archives and downloaded VINS vocabulary
 *.zip
+*.tar
+*.tar.gz
+/src/VINS-Mono/support_files/

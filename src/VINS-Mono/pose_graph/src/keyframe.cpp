@@ -1,4 +1,5 @@
 #include "keyframe.h"
+#include <iomanip>
 
 template <typename Derived>
 static void reduceVector(vector<Derived> &v, vector<uchar> status)
@@ -16,6 +17,8 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3
 		           vector<double> &_point_id, int _sequence)
 {
 	time_stamp = _time_stamp;
+	if (DATASET_START_TIME < 0.0)
+		DATASET_START_TIME = time_stamp;
 	index = _index;
 	vio_T_w_i = _vio_T_w_i;
 	vio_R_w_i = _vio_R_w_i;
@@ -485,6 +488,55 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	    	loop_info << relative_t.x(), relative_t.y(), relative_t.z(),
 	    	             relative_q.w(), relative_q.x(), relative_q.y(), relative_q.z(),
 	    	             relative_yaw;
+
+			if (SAVE_LOOP_MATCH_IMAGES && !image.empty() && !old_kf->image.empty())
+			{
+				cv::Mat cur_color, old_color;
+				if (image.channels() == 1)
+					cv::cvtColor(image, cur_color, cv::COLOR_GRAY2BGR);
+				else
+					cur_color = image.clone();
+				if (old_kf->image.channels() == 1)
+					cv::cvtColor(old_kf->image, old_color, cv::COLOR_GRAY2BGR);
+				else
+					old_color = old_kf->image.clone();
+
+				const int gap = 10;
+				const int header_height = 44;
+				const int canvas_width = cur_color.cols + gap + old_color.cols;
+				const int canvas_height = header_height + std::max(cur_color.rows, old_color.rows);
+				cv::Mat match_image(canvas_height, canvas_width, CV_8UC3, cv::Scalar(28, 28, 28));
+				cur_color.copyTo(match_image(cv::Rect(0, header_height, cur_color.cols, cur_color.rows)));
+				old_color.copyTo(match_image(cv::Rect(cur_color.cols + gap, header_height,
+				                                      old_color.cols, old_color.rows)));
+
+				for (size_t i = 0; i < matched_2d_cur.size(); ++i)
+				{
+					cv::Point2f cur_pt = matched_2d_cur[i] + cv::Point2f(0, header_height);
+					cv::Point2f old_pt = matched_2d_old[i] + cv::Point2f(cur_color.cols + gap, header_height);
+					cv::Scalar color(40 + (37 * i) % 215, 40 + (83 * i) % 215, 40 + (131 * i) % 215);
+					cv::circle(match_image, cur_pt, 3, color, -1, cv::LINE_AA);
+					cv::circle(match_image, old_pt, 3, color, -1, cv::LINE_AA);
+					cv::line(match_image, cur_pt, old_pt, color, 1, cv::LINE_AA);
+				}
+
+				const double current_elapsed = time_stamp - DATASET_START_TIME;
+				const double old_elapsed = old_kf->time_stamp - DATASET_START_TIME;
+				std::ostringstream time_label, filename;
+				time_label << std::fixed << std::setprecision(3)
+				           << "Current: +" << current_elapsed << " s"
+				           << "    Previous: +" << old_elapsed << " s";
+				cv::putText(match_image, time_label.str(), cv::Point(12, 29),
+				            cv::FONT_HERSHEY_SIMPLEX, 0.62, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+
+				filename << LOOP_MATCH_IMAGE_PATH << "/loop_"
+				         << std::fixed << std::setprecision(3) << current_elapsed << "s_kf"
+				         << index << "_to_kf" << old_kf->index << ".png";
+				if (cv::imwrite(filename.str(), match_image))
+					ROS_INFO("Saved loop match image: %s", filename.str().c_str());
+				else
+					ROS_ERROR("Failed to save loop match image: %s", filename.str().c_str());
+			}
 	    	if(FAST_RELOCALIZATION)
 	    	{
 			    sensor_msgs::PointCloud msg_match_points;

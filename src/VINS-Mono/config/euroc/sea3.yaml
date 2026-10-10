@@ -42,7 +42,7 @@ dvlpose_information_matrix: !!opencv-matrix
    rows: 6
    cols: 1
    dt: d
-   data: [10000, 10000, 10000, 1000, 1000, 100000000]
+   data: [100000, 100000, 100000, 10000, 10000, 100000000]
 
 tdvltoimu: !!opencv-matrix
    rows: 3
@@ -78,11 +78,26 @@ fisheye: 0              # if using fisheye, trun on it. A circle mask will be lo
 
 
 # 视觉约束鲁棒核函数参数（水下虚无区域外点剔除）
-visual_loss_threshold: 4.0  # 视觉重投影误差阈值（像素），超过此值降低权重或设为0
+visual_loss_threshold: 5.0  # 视觉重投影误差阈值（像素），超过此值降低权重或设为0
                             # 水下环境建议: 3.0-8.0，虚无严重时用更大值（5.0-8.0）
 use_hard_threshold: 1       # 0: Cauchy软核函数（默认，平滑降权）
                             # 1: 硬阈值（超过阈值权重=0，激进剔除）
                             # 2: 饱和损失（平滑过渡，介于两者之间）
+
+#event feature parameters
+use_event_compensation: 1  # 0: use uncompensated event frame (direct accumulation), 1: use motion-compensated event frame (better_flow)
+use_dynamic_window: 1      # 0: use fixed event count, 1: use adaptive dynamic window for event collection
+use_image_features: 1      # 0: disable image features, 1: enable image features (from normal camera)
+use_event_features: 1      # 0: disable event features, 1: enable event features (from event camera)
+
+# Dynamic window parameters (for event collection)
+min_event_count: 2000      # Minimum event count threshold: collect events only if count >= this value
+max_event_count: 25000     # Maximum event count (upper limit for collection)
+initial_event_count: 10000  # Initial event count for first frame
+alpha: 0.01                 # Adaptive coefficient α for dynamic window
+min_pixel_ratio: 0.2       # Minimum pixel ratio (20%)
+event_history_size: 1000000 # Event history buffer size
+interval_time_ns: 80000000 # Time interval in nanoseconds (80ms)
 
 
 #optimization parameters

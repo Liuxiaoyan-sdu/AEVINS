@@ -1,4 +1,5 @@
 #include "estimator.h"
+#include "utility/visualization.h"
 
 
 Estimator::Estimator(): f_manager{Rs}
@@ -62,6 +63,7 @@ void Estimator::clearState()
     sum_of_back = 0;
     sum_of_front = 0;
     frame_count = 0;
+    non_linear_frame_count = 0;  // 重置初始化后的帧计数器
     solver_flag = INITIAL;
     initial_timestamp = 0;
     all_image_frame.clear();
@@ -847,9 +849,25 @@ void Estimator::optimization()
                 // 创建DVL因子
                 DVLSpeedFactor* dvl_factor = new DVLSpeedFactor(
                     dvl_velocity_buf[frame_idx].first, R_DVL_TO_IMU, T_DVL_TO_IMU, Qi, dvl_velocity_buf[frame_idx].second, INFORMATION_MATRIX);
-                problem.AddResidualBlock(dvl_factor, NULL, para_SpeedBias[frame_idx]);
+                
+                // 应用损失函数：初始化成功后延迟DVL_CAUCHY_DELAY_FRAMES帧才使用柯西损失函数
+                // 初始化阶段（INITIAL）使用L2损失
+                // NON_LINEAR阶段但帧数不足时仍使用L2损失，达到延迟帧数后使用柯西损失
+                // 柯西参数需要乘以sqrt_info_scale来补偿残差被信息矩阵放大的影响
+                ceres::LossFunction* loss_function_dvl = nullptr;
+                bool use_cauchy = (USE_DVL_CAUCHY_LOSS == 1 && solver_flag == NON_LINEAR && 
+                                   non_linear_frame_count >= DVL_CAUCHY_DELAY_FRAMES);
+                if (use_cauchy) {
+                    double adjusted_cauchy_scale = dvl_factor->GetAdjustedCauchyScale(DVL_CAUCHY_SCALE);
+                    loss_function_dvl = new ceres::CauchyLoss(adjusted_cauchy_scale);
+                    ROS_DEBUG("DVL frame %d: Using adjusted CauchyLoss scale=%.2f (original=%.2f, sqrt_info_scale=%.2f)",
+                             frame_idx, adjusted_cauchy_scale, DVL_CAUCHY_SCALE, 
+                             adjusted_cauchy_scale / DVL_CAUCHY_SCALE);
+                }
+                problem.AddResidualBlock(dvl_factor, loss_function_dvl, para_SpeedBias[frame_idx]);
 
-                ROS_DEBUG("Added DVL speed constraint for frame %d with zero velocity", frame_idx);
+                ROS_DEBUG("Added DVL speed constraint for frame %d with %s loss (frame_count=%d)", 
+                         frame_idx, (use_cauchy ? "Cauchy" : "L2"), non_linear_frame_count);
             }
     }
     if(DVL_POSE_ADD == 1){
@@ -939,7 +957,61 @@ void Estimator::optimization()
     ceres::Solve(options, &problem, &summary);
     //cout << summary.BriefReport() << endl;
     ROS_DEBUG("Iterations : %d", static_cast<int>(summary.iterations.size()));
-    ROS_DEBUG("solver costs: %f", t_solver.toc());
+    double solver_cost = t_solver.toc();
+    ROS_DEBUG("solver costs: %f", solver_cost);
+
+    // 发布后端优化耗时 (ms)
+    std_msgs::Header tmp_header;
+    tmp_header.stamp = ros::Time::now();
+    pubBackendOptTime(solver_cost, tmp_header);
+
+    // 计算并输出DVL误差（仅在初始化完成后输出）
+    if (DVL_ADD == 1 && solver_flag == NON_LINEAR) {
+        double dvl_error_total = 0.0;
+        int dvl_count = 0;
+        ROS_INFO("============ DVL Velocity Constraint Errors ============");
+        for (int frame_idx = 0; frame_idx <= WINDOW_SIZE; ++frame_idx) {
+            // 获取当前帧的速度和偏置
+            Eigen::Vector3d v_world(para_SpeedBias[frame_idx][0], 
+                                   para_SpeedBias[frame_idx][1], 
+                                   para_SpeedBias[frame_idx][2]);
+            
+            // 获取IMU姿态
+            Eigen::Quaterniond Qi(para_Pose[frame_idx][6], para_Pose[frame_idx][3],
+                                para_Pose[frame_idx][4], para_Pose[frame_idx][5]);
+            
+            // 将世界坐标系速度转到IMU坐标系
+            Eigen::Vector3d v_imu_opt = Qi.inverse() * v_world;
+            
+            // 将DVL速度转到IMU坐标系
+            Eigen::Vector3d v_imu_measured = R_DVL_TO_IMU * dvl_velocity_buf[frame_idx].first;
+            
+            // 计算残差
+            Eigen::Vector3d residual = v_imu_opt - v_imu_measured;
+            double error = residual.norm();
+            dvl_error_total += error;
+            dvl_count++;
+            
+            ROS_INFO("Frame %d: DVL Error = %.6f (m/s), Residual = [%.6f, %.6f, %.6f]", 
+                    frame_idx, error, residual(0), residual(1), residual(2));
+        }
+        if (dvl_count > 0) {
+            ROS_INFO("Average DVL Error: %.6f (m/s)", dvl_error_total / dvl_count);
+            // 显示当前使用的损失函数和延迟状态
+            bool using_cauchy = USE_DVL_CAUCHY_LOSS == 1 && solver_flag == NON_LINEAR && 
+                               non_linear_frame_count >= DVL_CAUCHY_DELAY_FRAMES;
+            ROS_INFO("Loss Function: %s, Scale: %.4f, Frame: %d/%d (State: %s)", 
+                    (using_cauchy ? "Cauchy" : "L2"), DVL_CAUCHY_SCALE,
+                    non_linear_frame_count, DVL_CAUCHY_DELAY_FRAMES,
+                    (solver_flag == NON_LINEAR ? "NON_LINEAR" : "INITIAL"));
+        }
+        ROS_INFO("======================================================");
+        
+        // 如果进入NON_LINEAR阶段，增加帧计数
+        if (solver_flag == NON_LINEAR) {
+            non_linear_frame_count++;
+        }
+    }
 
     double2vector();
 

@@ -75,6 +75,10 @@ show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
 
+#event feature parameters
+use_event_compensation: 1  # 0: use uncompensated event frame (direct accumulation), 1: use motion-compensated event frame (better_flow)
+use_dynamic_window: 1       # 0: use fixed event count, 1: use adaptive dynamic window for event collection
+
 #optimization parameters
 max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time

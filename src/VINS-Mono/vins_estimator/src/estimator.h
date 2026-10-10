@@ -102,6 +102,7 @@ class Estimator
 
     int frame_count;
     int sum_of_outlier, sum_of_back, sum_of_front, sum_of_invalid, sum_of_frame;
+    int non_linear_frame_count;  // 用于计数初始化后的帧数
 
     FeatureManager f_manager;
     //普通相机

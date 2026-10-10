@@ -5,7 +5,7 @@ imu_topic: "/dvs/imu"
 dvl_topic: "/dvl/velocity_converted"
 dvl_position_topic: "/dvl/odometry"
 dvl_add: 1
-dvl_pose_add : 1
+dvl_pose_add : 0
 # image_topic: "/bf/additional/image0"
 # output_path: "./output/"
 # #add_mine
@@ -40,7 +40,9 @@ extrinsicTranslation: !!opencv-matrix
    rows: 3
    cols: 1
    dt: d
-   data: [0.0121 ,-0.01392151 ,-0.0225]
+   data: [0.00121 ,-0.001392151 ,-0.00225]
+
+# data: [0.0121 ,-0.01392151 ,-0.0225]
 
 dvlpose_information_matrix: !!opencv-matrix
    rows: 6
@@ -66,26 +68,43 @@ dvl_information_matrix: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [10000.0, 0.0, 0.0,
-          0.0, 10000.0, 0.0, 
-          0.0, 0.0, 10000.0]
+   data: [9000.0, 0.0, 0.0,
+          0.0, 9000.0, 0.0, 
+          0.0, 0.0, 9000.0]
 
 #feature traker paprameters
 max_cnt: 150            # max feature number in feature tracking
-min_dist: 30            # min distance between two features 
+min_dist: 20            # min distance between two features 
 freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 1.5
-F_threshold: 1.5       # imageransac threshold (pixel)   第1、0.5  1.5
+F_threshold: 0.5  #mageransac threshold (pixel)   第1、0.5  1.5
 F_threshold_1: 1.5     #event                                     0.7
 show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
+image_enhance_gamma: 0.9 # Gamma correction for image brightness. 1.0: no change. < 1.0: brighten dark areas (e.g. 0.5). > 1.0: darken.
 
 # 视觉约束鲁棒核函数参数（水下虚无区域外点剔除）
-visual_loss_threshold: 4.0  # 视觉重投影误差阈值（像素），超过此值降低权重或设为0
+visual_loss_threshold: 8.0  # 视觉重投影误差阈值（像素），超过此值降低权重或设为0
                             # 水下环境建议: 3.0-8.0，虚无严重时用更大值（5.0-8.0）
-use_hard_threshold: 1       # 0: Cauchy软核函数（默认，平滑降权）
+use_hard_threshold: 1     # 0: Cauchy软核函数（默认，平滑降权）
                             # 1: 硬阈值（超过阈值权重=0，激进剔除）
                             # 2: 饱和损失（平滑过渡，介于两者之间）
+
+
+#event feature parameters
+use_event_compensation: 1  # 0: use uncompensated event frame (direct accumulation), 1: use motion-compensated event frame (better_flow)
+use_dynamic_window: 1      # 0: use fixed event count, 1: use adaptive dynamic window for event collection
+use_image_features: 1      # 0: disable image features, 1: enable image features (from normal camera)
+use_event_features: 1      # 0: disable event features, 1: enable event features (from event camera)
+
+# Dynamic window parameters (for event collection)
+min_event_count: 500      # Minimum event count threshold: collect events only if count >= this value
+max_event_count: 30000     # Maximum event count (upper limit for collection)
+initial_event_count: 10000  # Initial event count for first frame
+alpha: 0.01                 # Adaptive coefficient α for dynamic window
+min_pixel_ratio: 0.2       # Minimum pixel ratio (20%)
+event_history_size: 1000000 # Event history buffer size
+interval_time_ns: 80000000 # Time interval in nanoseconds (80ms)
 
 #optimization parameters
 max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time

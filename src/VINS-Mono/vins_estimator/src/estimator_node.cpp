@@ -308,7 +308,23 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
         std_msgs::Header header = imu_msg->header;
         header.frame_id = "world";
         if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
+        {
             pubLatestOdometry(tmp_P, tmp_Q, tmp_V, header);
+
+            // 发布去除重力加速度的IMU数据
+            // tmp_Q: 当前世界系姿态; tmp_Ba: 加速度偏置; estimator.g: 重力向量(世界系)
+            Eigen::Vector3d raw_acc(imu_msg->linear_acceleration.x,
+                                    imu_msg->linear_acceleration.y,
+                                    imu_msg->linear_acceleration.z);
+            // 世界系下去偏置去重力的加速度: a_world = R*(acc_raw - Ba) - g
+            Eigen::Vector3d acc_no_gravity = tmp_Q * (raw_acc - tmp_Ba) - estimator.g;
+            // 角速度去偏置（IMU坐标系）
+            Eigen::Vector3d raw_gyr(imu_msg->angular_velocity.x,
+                                    imu_msg->angular_velocity.y,
+                                    imu_msg->angular_velocity.z);
+            Eigen::Vector3d gyr_no_bias = raw_gyr - tmp_Bg;
+            pubImuNoGravity(acc_no_gravity, gyr_no_bias, header);
+        }
     }
 }
 // const geometry_msgs::Vector3StampedConstPtr&
@@ -554,6 +570,9 @@ void process()
             printStatistics(estimator, whole_t);
             std_msgs::Header header = img_msg->header;
             header.frame_id = "world";
+
+            // 发布整帧后端耗时 (特征输入→位姿输出, ms)
+            pubBackendWholeTime(whole_t, header);
         
             pubOdometry(estimator, header);
             pubKeyPoses(estimator, header);

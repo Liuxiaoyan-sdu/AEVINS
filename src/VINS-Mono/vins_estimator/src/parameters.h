@@ -18,6 +18,10 @@ extern int DVL_POSE_ADD;
 extern Eigen::Matrix3d R_DVL_TO_IMU;
 extern Eigen::Vector3d T_DVL_TO_IMU;
 extern Eigen::Matrix3d INFORMATION_MATRIX;
+// DVL损失函数参数
+extern int USE_DVL_CAUCHY_LOSS;    // 是否使用柯西损失函数 (0/1)
+extern double DVL_CAUCHY_SCALE;    // 柯西损失函数的柯西值 (scale parameter)
+extern int DVL_CAUCHY_DELAY_FRAMES; // 初始化后延迟多少帧才启用柯西损失
 
 extern double INIT_DEPTH;
 extern double MIN_PARALLAX;
