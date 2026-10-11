@@ -71,9 +71,26 @@ max_cnt: 150            # max feature number in feature tracking
 min_dist: 10            # min distance between two features 
 freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 1.5
 F_threshold: 1.5       # imageransac threshold (pixel)   第1、0.5  1.5
-F_threshold_1: 0.7     #event                                     0.7show_track: 1           # publish tracking image as topic
+F_threshold_1: 0.7      # event-camera RANSAC threshold (pixel)
+show_track: 1           # publish tracking image as topic
 equalize: 1             # if image is too dark or light, trun on equalize to find enough features
 fisheye: 0              # if using fisheye, trun on it. A circle mask will be loaded to remove edge noisy points
+
+# Event feature and adaptive-window parameters
+use_event_compensation: 1
+use_dynamic_window: 1
+use_image_features: 1
+use_event_features: 1
+image_enhance_gamma: 1.0
+velocity_adaptive_beta: 2.0
+velocity_adaptive_ref: 0.5
+min_event_count: 500
+max_event_count: 30000
+initial_event_count: 10000
+alpha: 0.1
+min_pixel_ratio: 0.2
+event_history_size: 1000000
+interval_time_ns: 80000000
 
 #optimization parameters
 max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time

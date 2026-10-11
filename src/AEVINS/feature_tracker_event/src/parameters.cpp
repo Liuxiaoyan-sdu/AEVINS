@@ -95,17 +95,21 @@ void readParameters(ros::NodeHandle &n)
         FISHEYE_MASK = AEVINS_FOLDER_PATH + "config/fisheye_mask.jpg";
     
     // Read event feature control flags
-    USE_EVENT_COMPENSATION = fsSettings["use_event_compensation"];
-    USE_DYNAMIC_WINDOW = fsSettings["use_dynamic_window"];
-    USE_IMAGE_FEATURES = fsSettings["use_image_features"];
-    USE_EVENT_FEATURES = fsSettings["use_event_features"];
+    cv::FileNode node = fsSettings["use_event_compensation"];
+    if (!node.empty()) USE_EVENT_COMPENSATION = (int)node;
+    node = fsSettings["use_dynamic_window"];
+    if (!node.empty()) USE_DYNAMIC_WINDOW = (int)node;
+    node = fsSettings["use_image_features"];
+    if (!node.empty()) USE_IMAGE_FEATURES = (int)node;
+    node = fsSettings["use_event_features"];
+    if (!node.empty()) USE_EVENT_FEATURES = (int)node;
     // Gamma correction for image brightness
     IMAGE_ENHANCE_GAMMA = fsSettings["image_enhance_gamma"];
     if (IMAGE_ENHANCE_GAMMA < 0.1) IMAGE_ENHANCE_GAMMA = 1.0; // Safety check
 
     // Velocity-adaptive event collection parameters
     {
-        cv::FileNode node = fsSettings["velocity_adaptive_beta"];
+        node = fsSettings["velocity_adaptive_beta"];
         VELOCITY_ADAPTIVE_BETA = node.empty() ? 2.0 : (double)node;
         node = fsSettings["velocity_adaptive_ref"];
         VELOCITY_ADAPTIVE_REF  = node.empty() ? 0.5 : (double)node;
@@ -115,7 +119,7 @@ void readParameters(ros::NodeHandle &n)
 
     // Feature statistics publishing
     {
-        cv::FileNode node = fsSettings["publish_feature_stats"];
+        node = fsSettings["publish_feature_stats"];
         PUBLISH_FEATURE_STATS = node.empty() ? 0 : (int)node;
         node = fsSettings["feature_track_min_cnt"];
         FEATURE_TRACK_MIN_CNT = node.empty() ? 5 : (int)node;
@@ -129,15 +133,20 @@ void readParameters(ros::NodeHandle &n)
     ROS_INFO("Publish backend timing: %d", PUBLISH_BACKEND_TIMING);
     
     // Read dynamic window parameters
-    MIN_EVENT_COUNT = fsSettings["min_event_count"];
-    MAX_EVENT_COUNT = fsSettings["max_event_count"];
-    INITIAL_EVENT_COUNT = fsSettings["initial_event_count"];
-    ALPHA = fsSettings["alpha"];
-    MIN_PIXEL_RATIO = fsSettings["min_pixel_ratio"];
-    EVENT_HISTORY_SIZE = fsSettings["event_history_size"];
-    int interval_time_ms;
-    fsSettings["interval_time_ns"] >> interval_time_ms;
-    INTERVAL_TIME_NS = static_cast<unsigned long long>(interval_time_ms);
+    node = fsSettings["min_event_count"];
+    if (!node.empty()) MIN_EVENT_COUNT = (int)node;
+    node = fsSettings["max_event_count"];
+    if (!node.empty()) MAX_EVENT_COUNT = (int)node;
+    node = fsSettings["initial_event_count"];
+    if (!node.empty()) INITIAL_EVENT_COUNT = (int)node;
+    node = fsSettings["alpha"];
+    if (!node.empty()) ALPHA = (double)node;
+    node = fsSettings["min_pixel_ratio"];
+    if (!node.empty()) MIN_PIXEL_RATIO = (double)node;
+    node = fsSettings["event_history_size"];
+    if (!node.empty()) EVENT_HISTORY_SIZE = (int)node;
+    node = fsSettings["interval_time_ns"];
+    if (!node.empty()) INTERVAL_TIME_NS = static_cast<unsigned long long>((double)node);
     
     ROS_INFO("Event compensation: %d, Dynamic window: %d", USE_EVENT_COMPENSATION, USE_DYNAMIC_WINDOW);
     ROS_INFO("Use image features: %d, Use event features: %d", USE_IMAGE_FEATURES, USE_EVENT_FEATURES);
