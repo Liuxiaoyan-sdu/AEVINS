@@ -69,18 +69,18 @@ echo 'source ~/aevins_ws/devel/setup.bash' >> ~/.bashrc
 
 ## 运行
 
-先根据传感器话题、标定参数和数据路径选择或修改 `src/VINS-Mono/config/euroc/` 下的 YAML，再启动对应 launch 文件。例如：
+先根据传感器话题、标定参数和数据路径选择或修改 `src/AEVINS/config/euroc/` 下的 YAML，再启动对应 launch 文件。例如：
 
 ```bash
 source ~/aevins_ws/devel/setup.bash
-roslaunch vins_estimator euroc_sea.launch
+roslaunch aevins_estimator euroc_sea.launch
 ```
 
 另开终端启动 RViz：
 
 ```bash
 source ~/aevins_ws/devel/setup.bash
-roslaunch vins_estimator vins_rviz.launch
+roslaunch aevins_estimator aevins_rviz.launch
 ```
 
 最后播放数据包：
@@ -93,7 +93,7 @@ rosbag play /path/to/dataset.bag
 
 ## 目录说明
 
-- `src/VINS-Mono/`：VINS 估计器、图像/事件特征跟踪、回环与配置
+- `src/AEVINS/`：VINS 估计器、图像/事件特征跟踪、回环与配置
 - `src/rpg_dvs_ros/`：事件相机 ROS 消息及驱动
 - `src/tools/`：IMU/DVL 与图像预处理辅助节点
 - `src/catkin_simple/`：部分事件相机包需要的 catkin 辅助模块
@@ -103,4 +103,4 @@ rosbag play /path/to/dataset.bag
 
 ## 许可
 
-VINS-Mono 原始代码采用 GPLv3，详见 `src/VINS-Mono/LICENCE`。各第三方组件的许可信息以其目录内文件为准。
+VINS-Mono 原始代码采用 GPLv3，详见 `src/AEVINS/LICENCE`。各第三方组件的许可信息以其目录内文件为准。

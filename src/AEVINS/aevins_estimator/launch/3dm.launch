@@ -1,0 +1,15 @@
+<launch>
+
+    <arg name="config_path" default = "$(find feature_tracker)/../config/3dm/3dm_config.yaml" />
+	<arg name="aevins_path" default = "$(find feature_tracker)/../config/../" />
+
+    <node name="feature_tracker" pkg="feature_tracker" type="feature_tracker" output="log">
+        <param name="config_file" type="string" value="$(arg config_path)" />
+        <param name="aevins_folder" type="string" value="$(arg aevins_path)" />
+    </node>
+    <node name="aevins_estimator" pkg="aevins_estimator" type="aevins_estimator" output="screen">
+        <param name="config_file" type="string" value="$(arg config_path)" />
+        <param name="aevins_folder" type="string" value="$(arg aevins_path)" />
+    </node>
+     
+</launch>

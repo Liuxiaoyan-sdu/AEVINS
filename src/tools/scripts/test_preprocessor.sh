@@ -10,7 +10,7 @@ echo ""
 if [ -z "$ROS_DISTRO" ]; then
     echo "❌ ROS环境未配置，请先运行："
     echo "   source /opt/ros/<your-distro>/setup.bash"
-    echo "   source ~/vins_mono_ws/devel/setup.bash"
+    echo "   source ~/aevins_ws/devel/setup.bash"
     exit 1
 fi
 
@@ -18,7 +18,7 @@ echo "✅ ROS环境: $ROS_DISTRO"
 echo ""
 
 # 检查节点文件
-NODE_FILE="$HOME/vins_mono_ws/src/tools/scripts/image_preprocessor_node.py"
+NODE_FILE="$HOME/aevins_ws/src/tools/scripts/image_preprocessor_node.py"
 if [ ! -f "$NODE_FILE" ]; then
     echo "❌ 节点文件不存在: $NODE_FILE"
     exit 1
@@ -33,7 +33,7 @@ echo "✅ 节点文件: $NODE_FILE"
 echo ""
 
 # 检查launch文件
-LAUNCH_FILE="$HOME/vins_mono_ws/src/tools/launch/image_preprocessor.launch"
+LAUNCH_FILE="$HOME/aevins_ws/src/tools/launch/image_preprocessor.launch"
 if [ ! -f "$LAUNCH_FILE" ]; then
     echo "❌ Launch文件不存在: $LAUNCH_FILE"
     exit 1

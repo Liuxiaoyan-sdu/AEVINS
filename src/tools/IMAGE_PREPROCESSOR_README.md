@@ -55,7 +55,7 @@ src/tools/
 ### 1. 编译工作区（如果需要）
 
 ```bash
-cd ~/vins_mono_ws
+cd ~/aevins_ws
 catkin_make
 source devel/setup.bash
 ```
@@ -113,7 +113,7 @@ rosbag play your_data.bag
 roslaunch tools image_preprocessor.launch
 
 # 终端3：启动VINS-Mono（订阅处理后的话题）
-roslaunch vins_estimator vins_rviz.launch
+roslaunch aevins_estimator aevins_rviz.launch
 ```
 
 ---
@@ -276,7 +276,7 @@ rosnode info /image_preprocessor
 如果需要对已有图像进行批处理（不使用ROS），可以使用：
 
 ```bash
-cd ~/vins_mono_ws/src/tools/scripts
+cd ~/aevins_ws/src/tools/scripts
 python3 image_preprocess.py --in-dir ./images --out-dir ./processed \
     --denoise --clahe --overwrite
 ```

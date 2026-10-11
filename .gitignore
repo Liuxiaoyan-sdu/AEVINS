@@ -34,4 +34,4 @@ __pycache__/
 *.zip
 *.tar
 *.tar.gz
-/src/VINS-Mono/support_files/
+/src/AEVINS/support_files/
